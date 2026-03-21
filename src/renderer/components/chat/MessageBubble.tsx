@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { ChatMessage } from '@renderer/types/chat'
 
 const timeFormatter = new Intl.DateTimeFormat('ja-JP', {
@@ -5,7 +6,11 @@ const timeFormatter = new Intl.DateTimeFormat('ja-JP', {
   minute: '2-digit',
 })
 
-export function MessageBubble({ message }: { message: ChatMessage }): React.JSX.Element {
+export const MessageBubble = memo(function MessageBubble({
+  message,
+}: {
+  message: ChatMessage
+}): React.JSX.Element {
   const isUser = message.role === 'user'
 
   return (
@@ -33,4 +38,4 @@ export function MessageBubble({ message }: { message: ChatMessage }): React.JSX.
       </div>
     </div>
   )
-}
+})

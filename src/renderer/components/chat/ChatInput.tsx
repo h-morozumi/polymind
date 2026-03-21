@@ -8,6 +8,7 @@ export function ChatInput({
   disabled: boolean
 }): React.JSX.Element {
   const [input, setInput] = useState('')
+  const inputRef = useRef('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const adjustHeight = useCallback(() => {
@@ -18,15 +19,16 @@ export function ChatInput({
   }, [])
 
   const handleSend = useCallback(() => {
-    const trimmed = input.trim()
-    if (!trimmed || disabled) return
+    const trimmed = inputRef.current.trim()
+    if (!trimmed) return
     onSend(trimmed)
     setInput('')
+    inputRef.current = ''
     const textarea = textareaRef.current
     if (textarea) {
       textarea.style.height = 'auto'
     }
-  }, [input, disabled, onSend])
+  }, [onSend])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -46,6 +48,7 @@ export function ChatInput({
           value={input}
           onChange={(e) => {
             setInput(e.target.value)
+            inputRef.current = e.target.value
             adjustHeight()
           }}
           onKeyDown={handleKeyDown}

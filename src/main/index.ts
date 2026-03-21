@@ -1,7 +1,7 @@
-import { app, BrowserWindow, shell, ipcMain, session } from 'electron'
+import { app, BrowserWindow, shell, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { IpcChannels } from '@shared/ipc'
+import { registerSystemHandlers, registerChatHandlers } from './ipc'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -58,12 +58,8 @@ app.whenReady().then(() => {
     setupContentSecurityPolicy()
   }
 
-  ipcMain.handle(IpcChannels.PING, () => 'pong')
-
-  ipcMain.handle(IpcChannels.CHAT_SEND, async (_event, message: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000))
-    return `You said: "${message}"\n\nThis is a mock response from the main process. AI integration coming soon!`
-  })
+  registerSystemHandlers()
+  registerChatHandlers()
 
   createWindow()
 
