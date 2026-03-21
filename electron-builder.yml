@@ -1,0 +1,13 @@
+appId: com.polymind.app
+productName: polymind
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+win:
+  target:
+    - nsis
+mac:
+  target:
+    - dmg
