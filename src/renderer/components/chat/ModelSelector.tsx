@@ -1,5 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, type KeyboardEvent } from 'react'
 import type { LlmProvider, ModelSelection } from '@shared/llm'
+
+interface FlatModelItem {
+  providerId: string
+  modelId: string
+  modelName: string
+}
 
 interface ModelSelectorProps {
   providers: LlmProvider[]
@@ -15,9 +21,19 @@ export function ModelSelector({
   disabled,
 }: ModelSelectorProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const enabledProviders = providers.filter((p) => p.enabled && p.models.length > 0)
+
+  const flatItems = useMemo<FlatModelItem[]>(
+    () =>
+      enabledProviders.flatMap((p) =>
+        p.models.map((m) => ({ providerId: p.id, modelId: m.id, modelName: m.name })),
+      ),
+    [enabledProviders],
+  )
 
   const selectedLabel = getSelectedLabel(enabledProviders, selectedModel)
 
@@ -42,12 +58,61 @@ export function ModelSelector({
     [onSelect],
   )
 
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setIsOpen(true)
+          setHighlightIndex(0)
+        }
+        return
+      }
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setHighlightIndex((prev) => (prev < flatItems.length - 1 ? prev + 1 : 0))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setHighlightIndex((prev) => (prev > 0 ? prev - 1 : flatItems.length - 1))
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (highlightIndex >= 0 && highlightIndex < flatItems.length) {
+            const item = flatItems[highlightIndex]
+            handleSelect(item.providerId, item.modelId)
+          }
+          break
+        case 'Escape':
+          e.preventDefault()
+          setIsOpen(false)
+          break
+      }
+    },
+    [isOpen, flatItems, highlightIndex, handleSelect],
+  )
+
+  useEffect(() => {
+    if (isOpen && highlightIndex >= 0 && listRef.current) {
+      const el = listRef.current.querySelector(`[data-index="${highlightIndex}"]`)
+      el?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [isOpen, highlightIndex])
+
+  let itemIndex = 0
+
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900 px-2.5 py-1 text-xs text-gray-300 transition-colors hover:border-gray-600 hover:text-white disabled:opacity-40"
       >
         <ModelIcon />
@@ -55,25 +120,38 @@ export function ModelSelector({
         <ChevronIcon isOpen={isOpen} />
       </button>
 
-      {isOpen && enabledProviders.length > 0 && (
-        <div className="absolute bottom-full left-0 z-50 mb-1 max-h-72 w-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+      {isOpen && enabledProviders.length > 0 ? (
+        <div
+          ref={listRef}
+          role="listbox"
+          aria-label="モデル選択"
+          onKeyDown={handleKeyDown}
+          className="absolute bottom-full left-0 z-50 mb-1 max-h-72 w-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl"
+        >
           {enabledProviders.map((provider) => (
-            <div key={provider.id}>
+            <div key={provider.id} role="group" aria-label={provider.name}>
               <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                 {provider.name}
               </div>
               {provider.models.map((model) => {
+                const currentIndex = itemIndex++
                 const isSelected =
                   selectedModel?.providerId === provider.id && selectedModel?.modelId === model.id
+                const isHighlighted = currentIndex === highlightIndex
                 return (
                   <button
                     key={`${provider.id}/${model.id}`}
                     type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    data-index={currentIndex}
                     onClick={() => handleSelect(provider.id, model.id)}
                     className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600/20 text-blue-400'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      isHighlighted
+                        ? 'bg-gray-800 text-white'
+                        : isSelected
+                          ? 'bg-blue-600/20 text-blue-400'
+                          : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                     }`}
                   >
                     <span
@@ -88,7 +166,7 @@ export function ModelSelector({
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

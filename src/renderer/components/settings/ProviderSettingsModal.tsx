@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { LlmProvider, LlmProviderType, ModelSelection } from '@shared/llm'
 import { PROVIDER_TYPE_META, PROVIDER_MODEL_DEFAULTS } from '@shared/llm'
 
@@ -20,6 +20,53 @@ export function ProviderSettingsModal({
   onClose,
 }: ProviderSettingsModalProps): React.JSX.Element {
   const [view, setView] = useState<ViewState>({ mode: 'list' })
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  // Focus trap and Escape handler
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+
+    const dialog = dialogRef.current
+    if (dialog) {
+      const firstFocusable = dialog.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      firstFocusable?.focus()
+    }
+
+    return () => {
+      previousFocusRef.current?.focus()
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (e.key !== 'Tab' || !dialogRef.current) return
+
+      const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last?.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const handleAdd = useCallback(() => {
     const newProvider: LlmProvider = {
@@ -55,7 +102,13 @@ export function ProviderSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="mx-4 w-full max-w-lg rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="provider-settings-title"
+        className="mx-4 w-full max-w-lg rounded-xl border border-gray-700 bg-gray-900 shadow-2xl"
+      >
         {view.mode === 'list' ? (
           <ProviderList
             providers={providers}
@@ -96,10 +149,13 @@ function ProviderList({
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
-        <h2 className="text-base font-semibold text-white">LLM プロバイダー設定</h2>
+        <h2 id="provider-settings-title" className="text-base font-semibold text-white">
+          LLM プロバイダー設定
+        </h2>
         <button
           type="button"
           onClick={onClose}
+          aria-label="閉じる"
           className="text-gray-400 transition-colors hover:text-white"
         >
           <CloseIcon />
@@ -126,7 +182,7 @@ function ProviderList({
                     className={`h-2.5 w-2.5 rounded-full ${
                       provider.enabled ? 'bg-green-500' : 'bg-gray-600'
                     }`}
-                    title={provider.enabled ? '有効' : '無効'}
+                    aria-label={provider.enabled ? '有効' : '無効'}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -148,7 +204,7 @@ function ProviderList({
                       type="button"
                       onClick={() => onEdit(provider)}
                       className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
-                      title="編集"
+                      aria-label="編集"
                     >
                       <EditIcon />
                     </button>
@@ -156,7 +212,7 @@ function ProviderList({
                       type="button"
                       onClick={() => onDelete(provider.id)}
                       className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-red-400"
-                      title="削除"
+                      aria-label="削除"
                     >
                       <TrashIcon />
                     </button>
@@ -233,12 +289,13 @@ function ProviderForm({
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
-        <h2 className="text-base font-semibold text-white">
+        <h2 id="provider-settings-title" className="text-base font-semibold text-white">
           {isNew ? 'プロバイダーを追加' : 'プロバイダーを編集'}
         </h2>
         <button
           type="button"
           onClick={onCancel}
+          aria-label="閉じる"
           className="text-gray-400 transition-colors hover:text-white"
         >
           <CloseIcon />
@@ -310,6 +367,7 @@ function ProviderForm({
             type="button"
             role="switch"
             aria-checked={provider.enabled}
+            aria-label="プロバイダーを有効にする"
             onClick={() => setProvider((prev) => ({ ...prev, enabled: !prev.enabled }))}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
               provider.enabled ? 'bg-blue-600' : 'bg-gray-600'
@@ -343,6 +401,7 @@ function ProviderForm({
                   <button
                     type="button"
                     onClick={() => handleRemoveModel(model.id)}
+                    aria-label={`${model.name} を削除`}
                     className="text-gray-500 transition-colors hover:text-red-400"
                   >
                     <CloseIcon />
