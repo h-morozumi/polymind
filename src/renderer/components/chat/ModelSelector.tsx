@@ -56,7 +56,7 @@ export function ModelSelector({
       </button>
 
       {isOpen && enabledProviders.length > 0 && (
-        <div className="absolute bottom-full left-0 z-50 mb-1 w-64 rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+        <div className="absolute bottom-full left-0 z-50 mb-1 max-h-72 w-64 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
           {enabledProviders.map((provider) => (
             <div key={provider.id}>
               <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
