@@ -205,8 +205,7 @@ function ProviderForm({
       ...prev,
       type,
       baseUrl: typeMeta.defaultBaseUrl ?? prev.baseUrl ?? '',
-      models:
-        PROVIDER_MODEL_DEFAULTS[type].length > 0 ? [...PROVIDER_MODEL_DEFAULTS[type]] : prev.models,
+      models: [...PROVIDER_MODEL_DEFAULTS[type]],
     }))
   }, [])
 
