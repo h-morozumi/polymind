@@ -6,6 +6,13 @@ describe('IpcChannels', () => {
   it('defines PING channel', () => {
     expect(IpcChannels.PING).toBe('ping')
   })
+
+  it('defines LLM settings channels', () => {
+    expect(IpcChannels.LLM_GET_SETTINGS).toBe('llm:get-settings')
+    expect(IpcChannels.LLM_SAVE_PROVIDER).toBe('llm:save-provider')
+    expect(IpcChannels.LLM_DELETE_PROVIDER).toBe('llm:delete-provider')
+    expect(IpcChannels.LLM_SET_LAST_USED).toBe('llm:set-last-used')
+  })
 })
 
 describe('IpcResult', () => {

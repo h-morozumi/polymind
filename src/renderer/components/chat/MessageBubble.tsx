@@ -31,9 +31,14 @@ export const MessageBubble = memo(function MessageBubble({
           >
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
           </div>
-          <p className={`mt-1 text-xs text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
-            {timeFormatter.format(message.timestamp)}
-          </p>
+          <div
+            className={`mt-1 flex items-center gap-2 text-xs text-gray-500 ${isUser ? 'justify-end' : 'justify-start'}`}
+          >
+            {!isUser && message.modelName && (
+              <span className="text-gray-600">{message.modelName}</span>
+            )}
+            <span>{timeFormatter.format(message.timestamp)}</span>
+          </div>
         </div>
       </div>
     </div>

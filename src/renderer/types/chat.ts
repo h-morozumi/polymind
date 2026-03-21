@@ -5,4 +5,6 @@ export interface ChatMessage {
   role: MessageRole
   content: string
   timestamp: number
+  modelId?: string
+  modelName?: string
 }

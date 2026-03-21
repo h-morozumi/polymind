@@ -1,7 +1,8 @@
 import { app, BrowserWindow, shell, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { registerSystemHandlers, registerChatHandlers } from './ipc'
+import { registerSystemHandlers, registerChatHandlers, registerLlmSettingsHandlers } from './ipc'
+import { LlmSettingsService } from './services/llm-settings'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -58,8 +59,12 @@ app.whenReady().then(() => {
     setupContentSecurityPolicy()
   }
 
+  const llmSettingsPath = join(app.getPath('userData'), 'llm-settings.json')
+  const llmSettingsService = new LlmSettingsService(llmSettingsPath)
+
   registerSystemHandlers()
   registerChatHandlers()
+  registerLlmSettingsHandlers(llmSettingsService)
 
   createWindow()
 
