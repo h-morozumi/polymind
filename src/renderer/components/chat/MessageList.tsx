@@ -29,13 +29,26 @@ export function MessageList({
   isLoading: boolean
 }): React.JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, isLoading])
 
+  // Keep scrolled to bottom when message content changes (long responses)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const lastMessage = messages[messages.length - 1]
+    if (!lastMessage) return
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-6">
       {messages.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center text-gray-500">
           <p className="text-lg font-medium">polymind</p>

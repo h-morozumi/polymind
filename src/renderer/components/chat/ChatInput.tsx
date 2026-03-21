@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react'
 
 export function ChatInput({
   onSend,
@@ -10,6 +10,18 @@ export function ChatInput({
   const [input, setInput] = useState('')
   const inputRef = useRef('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const prevDisabledRef = useRef(disabled)
+
+  useEffect(() => {
+    textareaRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (prevDisabledRef.current && !disabled) {
+      textareaRef.current?.focus()
+    }
+    prevDisabledRef.current = disabled
+  }, [disabled])
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current
