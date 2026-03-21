@@ -1,5 +1,6 @@
 export const IpcChannels = {
   PING: 'ping',
+  CHAT_SEND: 'chat:send',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

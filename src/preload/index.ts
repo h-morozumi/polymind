@@ -3,6 +3,8 @@ import { IpcChannels } from '@shared/ipc'
 
 const api = {
   ping: (): Promise<string> => ipcRenderer.invoke(IpcChannels.PING),
+  sendChat: (message: string): Promise<string> =>
+    ipcRenderer.invoke(IpcChannels.CHAT_SEND, message),
 }
 
 contextBridge.exposeInMainWorld('api', api)

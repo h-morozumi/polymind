@@ -1,0 +1,74 @@
+import { useState, useRef, useCallback, type KeyboardEvent } from 'react'
+
+export function ChatInput({
+  onSend,
+  disabled,
+}: {
+  onSend: (message: string) => void
+  disabled: boolean
+}): React.JSX.Element {
+  const [input, setInput] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const adjustHeight = useCallback(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
+  }, [])
+
+  const handleSend = useCallback(() => {
+    const trimmed = input.trim()
+    if (!trimmed || disabled) return
+    onSend(trimmed)
+    setInput('')
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+    }
+  }, [input, disabled, onSend])
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSend()
+      }
+    },
+    [handleSend],
+  )
+
+  return (
+    <div className="border-t border-gray-800 bg-gray-950 px-4 py-3">
+      <div className="mx-auto flex max-w-3xl items-end gap-3">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value)
+            adjustHeight()
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="メッセージを入力..."
+          disabled={disabled}
+          rows={1}
+          className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 disabled:opacity-50"
+        />
+        <button
+          onClick={handleSend}
+          disabled={disabled || !input.trim()}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-5 w-5"
+          >
+            <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}

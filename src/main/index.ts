@@ -60,6 +60,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle(IpcChannels.PING, () => 'pong')
 
+  ipcMain.handle(IpcChannels.CHAT_SEND, async (_event, message: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000))
+    return `You said: "${message}"\n\nThis is a mock response from the main process. AI integration coming soon!`
+  })
+
   createWindow()
 
   app.on('activate', () => {
