@@ -124,6 +124,19 @@ describe('LlmSettingsService', () => {
     expect(rendererSettings.providers[0].apiKey).toBe('••••••••')
   })
 
+  it('preserves apiKey when saving with masked value', () => {
+    const service = new LlmSettingsService(settingsPath)
+    service.saveProvider(createTestProvider({ apiKey: 'sk-real-secret' }))
+
+    const rendererSettings = service.getSettingsForRenderer()
+    const masked = rendererSettings.providers[0]
+    service.saveProvider({ ...masked, name: 'Renamed' } as LlmProvider)
+
+    const settings = service.getSettings()
+    expect(settings.providers[0].name).toBe('Renamed')
+    expect(settings.providers[0].apiKey).toBe('sk-real-secret')
+  })
+
   it('returns deep clone from getSettings', () => {
     const service = new LlmSettingsService(settingsPath)
     service.saveProvider(createTestProvider())

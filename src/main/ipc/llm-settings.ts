@@ -58,7 +58,16 @@ function isValidProvider(value: unknown): value is LlmProvider {
     typeof obj.id === 'string' &&
     typeof obj.name === 'string' &&
     typeof obj.type === 'string' &&
+    (obj.apiKey === undefined || typeof obj.apiKey === 'string') &&
+    (obj.baseUrl === undefined || typeof obj.baseUrl === 'string') &&
     Array.isArray(obj.models) &&
+    obj.models.every(
+      (m: unknown) =>
+        typeof m === 'object' &&
+        m !== null &&
+        typeof (m as Record<string, unknown>).id === 'string' &&
+        typeof (m as Record<string, unknown>).name === 'string',
+    ) &&
     typeof obj.enabled === 'boolean'
   )
 }

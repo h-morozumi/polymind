@@ -42,12 +42,14 @@ export class LlmSettingsService {
     return structuredClone(this.settings)
   }
 
+  private static readonly MASKED_API_KEY = '••••••••'
+
   /** Returns settings without apiKey values (safe for renderer) */
   getSettingsForRenderer(): LlmSettings {
     return {
       providers: this.settings.providers.map((p) => ({
         ...p,
-        apiKey: p.apiKey ? '••••••••' : undefined,
+        apiKey: p.apiKey ? LlmSettingsService.MASKED_API_KEY : undefined,
       })),
       lastUsedModel: this.settings.lastUsedModel,
     }
@@ -56,6 +58,10 @@ export class LlmSettingsService {
   saveProvider(provider: LlmProvider): void {
     const index = this.settings.providers.findIndex((p) => p.id === provider.id)
     if (index >= 0) {
+      const existing = this.settings.providers[index]
+      if (provider.apiKey === LlmSettingsService.MASKED_API_KEY) {
+        provider = { ...provider, apiKey: existing.apiKey }
+      }
       this.settings.providers[index] = provider
     } else {
       this.settings.providers.push(provider)
