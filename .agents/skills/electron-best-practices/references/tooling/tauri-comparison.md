@@ -18,22 +18,22 @@ for the backend and delegates rendering to the operating system's native WebView
 
 ## Detailed Comparison
 
-| Factor | Electron | Tauri |
-|---|---|---|
-| Bundle size | 80-150 MB | 2.5-10 MB |
-| Memory (idle) | 150-300 MB | 30-40 MB |
-| Startup time | 1-3 seconds | <1 second |
-| Backend language | JavaScript/TypeScript | Rust |
-| Rendering engine | Chromium (bundled) | System WebView |
-| Rendering consistency | Identical everywhere | Varies by OS |
-| Ecosystem maturity | Very mature | Rapidly growing |
-| Mobile support | None | iOS/Android (Tauri 2.0) |
-| Node.js modules | Full support | N/A (Rust crates) |
-| Native module support | node-gyp, prebuild | Rust FFI |
-| Auto-updates | electron-updater | tauri-plugin-updater |
-| Security model | Process isolation | Capability-based |
-| Learning curve (JS team) | Low | High (requires Rust) |
-| Dev tooling | Mature, extensive | Growing |
+| Factor                   | Electron              | Tauri                   |
+| ------------------------ | --------------------- | ----------------------- |
+| Bundle size              | 80-150 MB             | 2.5-10 MB               |
+| Memory (idle)            | 150-300 MB            | 30-40 MB                |
+| Startup time             | 1-3 seconds           | <1 second               |
+| Backend language         | JavaScript/TypeScript | Rust                    |
+| Rendering engine         | Chromium (bundled)    | System WebView          |
+| Rendering consistency    | Identical everywhere  | Varies by OS            |
+| Ecosystem maturity       | Very mature           | Rapidly growing         |
+| Mobile support           | None                  | iOS/Android (Tauri 2.0) |
+| Node.js modules          | Full support          | N/A (Rust crates)       |
+| Native module support    | node-gyp, prebuild    | Rust FFI                |
+| Auto-updates             | electron-updater      | tauri-plugin-updater    |
+| Security model           | Process isolation     | Capability-based        |
+| Learning curve (JS team) | Low                   | High (requires Rust)    |
+| Dev tooling              | Mature, extensive     | Growing                 |
 
 ---
 
@@ -113,6 +113,7 @@ application renders identically on Windows, macOS, and Linux. CSS features,
 JavaScript APIs, and rendering behavior are the same on every platform.
 
 Tauri uses the system WebView, which means:
+
 - **macOS**: WebKit (Safari engine) -- generally modern and capable
 - **Windows**: WebView2 (Chromium-based Edge) -- close to Chrome behavior
 - **Linux**: WebKitGTK -- can lag behind in feature support
@@ -126,7 +127,7 @@ cross-platform UIs, this is a significant consideration.
 .container {
   /* backdrop-filter has inconsistent support in WebKitGTK */
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);  /* Required for WebKit */
+  -webkit-backdrop-filter: blur(10px); /* Required for WebKit */
 }
 ```
 
@@ -161,21 +162,21 @@ fn main() {
 
 ```typescript
 // Tauri frontend invocation (TypeScript)
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core'
 
-const content = await invoke<string>('read_file', { path: '/tmp/data.txt' });
+const content = await invoke<string>('read_file', { path: '/tmp/data.txt' })
 ```
 
 Compare with the equivalent Electron pattern:
 
 ```typescript
 // Electron main process (TypeScript/Node.js)
-import { ipcMain } from 'electron';
-import { readFile } from 'fs/promises';
+import { ipcMain } from 'electron'
+import { readFile } from 'fs/promises'
 
 ipcMain.handle('read-file', async (_event, path: string) => {
-  return readFile(path, 'utf-8');
-});
+  return readFile(path, 'utf-8')
+})
 ```
 
 ---
@@ -211,12 +212,7 @@ declaratively in the Tauri configuration file.
         {
           "identifier": "main-window",
           "windows": ["main"],
-          "permissions": [
-            "fs:read",
-            "fs:write",
-            "dialog:open",
-            "dialog:save"
-          ]
+          "permissions": ["fs:read", "fs:write", "dialog:open", "dialog:save"]
         }
       ]
     }
@@ -310,13 +306,13 @@ a transition period if needed.
 
 ## Team Skill Requirements
 
-| Skill | Electron | Tauri |
-|---|---|---|
-| JavaScript/TypeScript | Required | Required (frontend) |
-| Node.js | Required (backend) | Not used |
-| Rust | Not needed | Required (backend) |
-| HTML/CSS | Required | Required |
-| Platform-specific knowledge | Minimal | Moderate (WebView differences) |
+| Skill                       | Electron           | Tauri                          |
+| --------------------------- | ------------------ | ------------------------------ |
+| JavaScript/TypeScript       | Required           | Required (frontend)            |
+| Node.js                     | Required (backend) | Not used                       |
+| Rust                        | Not needed         | Required (backend)             |
+| HTML/CSS                    | Required           | Required                       |
+| Platform-specific knowledge | Minimal            | Moderate (WebView differences) |
 
 For teams already proficient in JavaScript/TypeScript with no Rust experience,
 adopting Tauri adds 2-4 months of learning time before the team is productive

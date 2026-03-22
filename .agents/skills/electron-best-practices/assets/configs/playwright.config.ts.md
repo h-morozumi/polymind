@@ -6,7 +6,7 @@ Playwright has first-class support for testing Electron applications through its
 
 ```typescript
 // playwright.config.ts
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -35,7 +35,7 @@ export default defineConfig({
       testMatch: '**/*.spec.ts',
     },
   ],
-});
+})
 ```
 
 ## Electron Test Helpers
@@ -44,12 +44,12 @@ The helper module below provides reusable utilities for launching the Electron a
 
 ```typescript
 // tests/e2e/electron-helpers.ts
-import { _electron as electron, ElectronApplication, Page } from '@playwright/test';
-import { resolve } from 'path';
+import { _electron as electron, ElectronApplication, Page } from '@playwright/test'
+import { resolve } from 'path'
 
 export async function launchElectron(): Promise<{
-  app: ElectronApplication;
-  window: Page;
+  app: ElectronApplication
+  window: Page
 }> {
   const app = await electron.launch({
     args: [resolve(__dirname, '../../out/main/index.js')],
@@ -57,25 +57,25 @@ export async function launchElectron(): Promise<{
       ...process.env,
       NODE_ENV: 'test',
     },
-  });
+  })
 
-  const window = await app.firstWindow();
-  await window.waitForLoadState('domcontentloaded');
+  const window = await app.firstWindow()
+  await window.waitForLoadState('domcontentloaded')
 
-  return { app, window };
+  return { app, window }
 }
 
 export async function stubDialog(
   app: ElectronApplication,
   method: 'OpenDialog' | 'SaveDialog' | 'MessageBox',
-  returnValue: unknown
+  returnValue: unknown,
 ): Promise<void> {
   await app.evaluate(
     async ({ dialog }, [m, rv]) => {
-      (dialog as Record<string, unknown>)[`show${m}`] = () => Promise.resolve(rv);
+      ;(dialog as Record<string, unknown>)[`show${m}`] = () => Promise.resolve(rv)
     },
-    [method, returnValue] as const
-  );
+    [method, returnValue] as const,
+  )
 }
 ```
 
@@ -83,38 +83,38 @@ export async function stubDialog(
 
 ```typescript
 // tests/e2e/app-launch.spec.ts
-import { test, expect } from '@playwright/test';
-import { launchElectron } from './electron-helpers';
+import { test, expect } from '@playwright/test'
+import { launchElectron } from './electron-helpers'
 
-let app: Awaited<ReturnType<typeof launchElectron>>['app'];
-let window: Awaited<ReturnType<typeof launchElectron>>['window'];
+let app: Awaited<ReturnType<typeof launchElectron>>['app']
+let window: Awaited<ReturnType<typeof launchElectron>>['window']
 
 test.beforeEach(async () => {
-  ({ app, window } = await launchElectron());
-});
+  ;({ app, window } = await launchElectron())
+})
 
 test.afterEach(async () => {
-  await app.close();
-});
+  await app.close()
+})
 
 test('application launches and shows main window', async () => {
-  const title = await window.title();
-  expect(title).toBeTruthy();
+  const title = await window.title()
+  expect(title).toBeTruthy()
 
   // Verify the window is visible
   const isVisible = await app.evaluate(async ({ BrowserWindow }) => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    return mainWindow.isVisible();
-  });
-  expect(isVisible).toBe(true);
-});
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    return mainWindow.isVisible()
+  })
+  expect(isVisible).toBe(true)
+})
 
 test('main process version is accessible', async () => {
   const electronVersion = await app.evaluate(async ({ app }) => {
-    return app.getVersion();
-  });
-  expect(electronVersion).toMatch(/\d+\.\d+\.\d+/);
-});
+    return app.getVersion()
+  })
+  expect(electronVersion).toMatch(/\d+\.\d+\.\d+/)
+})
 ```
 
 ## Notes

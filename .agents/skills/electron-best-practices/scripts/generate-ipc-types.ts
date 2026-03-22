@@ -18,256 +18,253 @@
  */
 
 // === Constants ===
-const VERSION = "1.0.0";
-const SCRIPT_NAME = "generate-ipc-types";
+const VERSION = '1.0.0'
+const SCRIPT_NAME = 'generate-ipc-types'
 
 // === Types ===
 interface GenerateOptions {
-  handlers: string;
-  output: string;
-  validate: boolean;
-  json: boolean;
+  handlers: string
+  output: string
+  validate: boolean
+  json: boolean
 }
 
 interface DiscoveredChannel {
-  name: string;
-  type: "handle" | "on";
-  file: string;
-  line: number;
+  name: string
+  type: 'handle' | 'on'
+  file: string
+  line: number
 }
 
 interface ValidationMismatch {
-  channel: string;
-  issue: "missing-in-types" | "missing-in-handlers" | "type-mismatch";
-  detail: string;
+  channel: string
+  issue: 'missing-in-types' | 'missing-in-handlers' | 'type-mismatch'
+  detail: string
 }
 
 interface GenerationResult {
-  handlersPath: string;
-  outputPath: string;
-  filesScanned: number;
-  channels: DiscoveredChannel[];
-  handleChannels: string[];
-  onChannels: string[];
-  generated: boolean;
+  handlersPath: string
+  outputPath: string
+  filesScanned: number
+  channels: DiscoveredChannel[]
+  handleChannels: string[]
+  onChannels: string[]
+  generated: boolean
   validation?: {
-    valid: boolean;
-    mismatches: ValidationMismatch[];
-  };
+    valid: boolean
+    mismatches: ValidationMismatch[]
+  }
 }
 
 // === Detection Patterns ===
 const HANDLER_PATTERNS: Array<{
-  name: string;
-  pattern: RegExp;
-  type: "handle" | "on";
+  name: string
+  pattern: RegExp
+  type: 'handle' | 'on'
 }> = [
   {
-    name: "ipcMain.handle",
+    name: 'ipcMain.handle',
     pattern: /ipcMain\.handle\(\s*['"]([^'"]+)['"]/g,
-    type: "handle",
+    type: 'handle',
   },
   {
-    name: "ipcMain.on",
+    name: 'ipcMain.on',
     pattern: /ipcMain\.on\(\s*['"]([^'"]+)['"]/g,
-    type: "on",
+    type: 'on',
   },
-];
+]
 
 // === File Discovery ===
 async function findHandlerFiles(path: string): Promise<string[]> {
-  const files: string[] = [];
-  const extensions = [".ts", ".tsx", ".js", ".mjs"];
+  const files: string[] = []
+  const extensions = ['.ts', '.tsx', '.js', '.mjs']
 
   try {
-    const stat = await Deno.stat(path);
+    const stat = await Deno.stat(path)
 
     if (stat.isFile) {
-      const hasExt = extensions.some((ext) => path.endsWith(ext));
+      const hasExt = extensions.some((ext) => path.endsWith(ext))
       if (hasExt) {
-        files.push(path);
+        files.push(path)
       }
     } else if (stat.isDirectory) {
       for await (const entry of Deno.readDir(path)) {
         // Skip node_modules and hidden directories
-        if (entry.name.startsWith(".") || entry.name === "node_modules") {
-          continue;
+        if (entry.name.startsWith('.') || entry.name === 'node_modules') {
+          continue
         }
 
-        const fullPath = `${path}/${entry.name}`;
+        const fullPath = `${path}/${entry.name}`
 
         if (entry.isFile) {
-          const hasExt = extensions.some((ext) => entry.name.endsWith(ext));
+          const hasExt = extensions.some((ext) => entry.name.endsWith(ext))
           // Skip declaration files
-          if (hasExt && !entry.name.endsWith(".d.ts")) {
-            files.push(fullPath);
+          if (hasExt && !entry.name.endsWith('.d.ts')) {
+            files.push(fullPath)
           }
         } else if (entry.isDirectory) {
-          const subFiles = await findHandlerFiles(fullPath);
-          files.push(...subFiles);
+          const subFiles = await findHandlerFiles(fullPath)
+          files.push(...subFiles)
         }
       }
     }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
-      console.error(`Error: Path not found: ${path}`);
-      Deno.exit(1);
+      console.error(`Error: Path not found: ${path}`)
+      Deno.exit(1)
     }
-    throw error;
+    throw error
   }
 
-  return files;
+  return files
 }
 
 // === Channel Discovery ===
-function discoverChannels(
-  filePath: string,
-  content: string
-): DiscoveredChannel[] {
-  const channels: DiscoveredChannel[] = [];
-  const lines = content.split("\n");
+function discoverChannels(filePath: string, content: string): DiscoveredChannel[] {
+  const channels: DiscoveredChannel[] = []
+  const lines = content.split('\n')
 
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
-    const line = lines[lineNum];
-    const trimmedLine = line.trim();
+    const line = lines[lineNum]
+    const trimmedLine = line.trim()
 
     // Skip comment lines
-    if (trimmedLine.startsWith("//") || trimmedLine.startsWith("/*")) {
-      continue;
+    if (trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) {
+      continue
     }
 
     for (const handlerPattern of HANDLER_PATTERNS) {
       // Reset regex lastIndex
-      handlerPattern.pattern.lastIndex = 0;
+      handlerPattern.pattern.lastIndex = 0
 
-      let match;
+      let match
       while ((match = handlerPattern.pattern.exec(line)) !== null) {
         channels.push({
           name: match[1],
           type: handlerPattern.type,
           file: filePath,
           line: lineNum + 1,
-        });
+        })
       }
     }
   }
 
-  return channels;
+  return channels
 }
 
 // === Type Generation ===
 function generateTypeDefinitions(channels: DiscoveredChannel[]): string {
-  const handleChannels = channels.filter((c) => c.type === "handle");
-  const onChannels = channels.filter((c) => c.type === "on");
+  const handleChannels = channels.filter((c) => c.type === 'handle')
+  const onChannels = channels.filter((c) => c.type === 'on')
 
   let output = `// Auto-generated by ${SCRIPT_NAME}.ts
 // Do not edit manually
 // Re-run the generator when IPC handlers change
 
-`;
+`
 
   // Generate IpcChannelMap for invoke/handle channels
-  output += `export type IpcChannelMap = {\n`;
+  output += `export type IpcChannelMap = {\n`
   if (handleChannels.length === 0) {
-    output += `  // No invoke/handle channels discovered\n`;
+    output += `  // No invoke/handle channels discovered\n`
   } else {
     for (const channel of handleChannels) {
-      output += `  '${channel.name}': { args: unknown[]; return: unknown };\n`;
+      output += `  '${channel.name}': { args: unknown[]; return: unknown };\n`
     }
   }
-  output += `};\n\n`;
+  output += `};\n\n`
 
   // Generate IpcEventMap for on/send channels
-  output += `export type IpcEventMap = {\n`;
+  output += `export type IpcEventMap = {\n`
   if (onChannels.length === 0) {
-    output += `  // No event channels discovered\n`;
+    output += `  // No event channels discovered\n`
   } else {
     for (const channel of onChannels) {
-      output += `  '${channel.name}': { args: unknown[] };\n`;
+      output += `  '${channel.name}': { args: unknown[] };\n`
     }
   }
-  output += `};\n\n`;
+  output += `};\n\n`
 
   // Generate channel name types
-  output += `export type IpcInvokeChannel = keyof IpcChannelMap;\n`;
-  output += `export type IpcEventChannel = keyof IpcEventMap;\n\n`;
+  output += `export type IpcInvokeChannel = keyof IpcChannelMap;\n`
+  output += `export type IpcEventChannel = keyof IpcEventMap;\n\n`
 
   // Generate typed preload API interface
-  output += `/**\n`;
-  output += ` * Typed preload API interface.\n`;
-  output += ` *\n`;
-  output += ` * Use this interface with contextBridge.exposeInMainWorld\n`;
-  output += ` * to ensure type-safe IPC from the renderer process.\n`;
-  output += ` */\n`;
-  output += `export interface TypedElectronAPI {\n`;
+  output += `/**\n`
+  output += ` * Typed preload API interface.\n`
+  output += ` *\n`
+  output += ` * Use this interface with contextBridge.exposeInMainWorld\n`
+  output += ` * to ensure type-safe IPC from the renderer process.\n`
+  output += ` */\n`
+  output += `export interface TypedElectronAPI {\n`
   if (handleChannels.length === 0 && onChannels.length === 0) {
-    output += `  // No channels discovered - add IPC handlers and re-run\n`;
+    output += `  // No channels discovered - add IPC handlers and re-run\n`
   }
   for (const channel of handleChannels) {
-    const fnName = channelToFunctionName(channel.name);
-    output += `  ${fnName}: (...args: IpcChannelMap['${channel.name}']['args']) => Promise<IpcChannelMap['${channel.name}']['return']>;\n`;
+    const fnName = channelToFunctionName(channel.name)
+    output += `  ${fnName}: (...args: IpcChannelMap['${channel.name}']['args']) => Promise<IpcChannelMap['${channel.name}']['return']>;\n`
   }
   for (const channel of onChannels) {
-    const fnName = channelToFunctionName(channel.name);
-    output += `  ${fnName}: (callback: (...args: IpcEventMap['${channel.name}']['args']) => void) => void;\n`;
+    const fnName = channelToFunctionName(channel.name)
+    output += `  ${fnName}: (callback: (...args: IpcEventMap['${channel.name}']['args']) => void) => void;\n`
   }
-  output += `}\n\n`;
+  output += `}\n\n`
 
   // TODO comment for manual refinement
-  output += `// TODO: Replace 'unknown' types above with specific types for each channel.\n`;
-  output += `// Example:\n`;
-  output += `//   'app:get-version': { args: []; return: string };\n`;
+  output += `// TODO: Replace 'unknown' types above with specific types for each channel.\n`
+  output += `// Example:\n`
+  output += `//   'app:get-version': { args: []; return: string };\n`
 
-  return output;
+  return output
 }
 
 function channelToFunctionName(channel: string): string {
   // Convert 'some:channel-name' to 'someChannelName'
   return channel
     .replace(/[:-]+(.)/g, (_, c) => c.toUpperCase())
-    .replace(/^(.)/, (_, c) => c.toLowerCase());
+    .replace(/^(.)/, (_, c) => c.toLowerCase())
 }
 
 // === Validation ===
 async function validateTypes(
   outputPath: string,
-  channels: DiscoveredChannel[]
+  channels: DiscoveredChannel[],
 ): Promise<{ valid: boolean; mismatches: ValidationMismatch[] }> {
-  const mismatches: ValidationMismatch[] = [];
+  const mismatches: ValidationMismatch[] = []
 
-  let existingContent: string;
+  let existingContent: string
   try {
-    existingContent = await Deno.readTextFile(outputPath);
+    existingContent = await Deno.readTextFile(outputPath)
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       mismatches.push({
-        channel: "*",
-        issue: "missing-in-types",
+        channel: '*',
+        issue: 'missing-in-types',
         detail: `Type definition file not found: ${outputPath}`,
-      });
-      return { valid: false, mismatches };
+      })
+      return { valid: false, mismatches }
     }
-    throw error;
+    throw error
   }
 
   // Extract channel names from existing type file
-  const existingChannelPattern = /'([^']+)':\s*\{/g;
-  const existingChannels = new Set<string>();
-  let match;
+  const existingChannelPattern = /'([^']+)':\s*\{/g
+  const existingChannels = new Set<string>()
+  let match
   while ((match = existingChannelPattern.exec(existingContent)) !== null) {
-    existingChannels.add(match[1]);
+    existingChannels.add(match[1])
   }
 
-  const discoveredNames = new Set(channels.map((c) => c.name));
+  const discoveredNames = new Set(channels.map((c) => c.name))
 
   // Check for channels in handlers but not in types
   for (const channel of channels) {
     if (!existingChannels.has(channel.name)) {
       mismatches.push({
         channel: channel.name,
-        issue: "missing-in-types",
+        issue: 'missing-in-types',
         detail: `Channel '${channel.name}' found in ${channel.file}:${channel.line} but not in type definitions`,
-      });
+      })
     }
   }
 
@@ -276,54 +273,50 @@ async function validateTypes(
     if (!discoveredNames.has(existing)) {
       mismatches.push({
         channel: existing,
-        issue: "missing-in-handlers",
+        issue: 'missing-in-handlers',
         detail: `Channel '${existing}' defined in types but no matching handler found`,
-      });
+      })
     }
   }
 
   return {
     valid: mismatches.length === 0,
     mismatches,
-  };
+  }
 }
 
 // === Main Analysis ===
 async function generate(options: GenerateOptions): Promise<GenerationResult> {
-  const files = await findHandlerFiles(options.handlers);
+  const files = await findHandlerFiles(options.handlers)
 
   if (files.length === 0) {
-    console.error(`No handler files found in: ${options.handlers}`);
-    Deno.exit(1);
+    console.error(`No handler files found in: ${options.handlers}`)
+    Deno.exit(1)
   }
 
-  const allChannels: DiscoveredChannel[] = [];
+  const allChannels: DiscoveredChannel[] = []
 
   for (const file of files) {
-    const content = await Deno.readTextFile(file);
-    const channels = discoverChannels(file, content);
-    allChannels.push(...channels);
+    const content = await Deno.readTextFile(file)
+    const channels = discoverChannels(file, content)
+    allChannels.push(...channels)
   }
 
   // Deduplicate channels by name (keep first occurrence)
-  const seen = new Set<string>();
+  const seen = new Set<string>()
   const uniqueChannels = allChannels.filter((c) => {
     if (seen.has(c.name)) {
-      return false;
+      return false
     }
-    seen.add(c.name);
-    return true;
-  });
+    seen.add(c.name)
+    return true
+  })
 
   // Sort channels alphabetically
-  uniqueChannels.sort((a, b) => a.name.localeCompare(b.name));
+  uniqueChannels.sort((a, b) => a.name.localeCompare(b.name))
 
-  const handleChannels = uniqueChannels
-    .filter((c) => c.type === "handle")
-    .map((c) => c.name);
-  const onChannels = uniqueChannels
-    .filter((c) => c.type === "on")
-    .map((c) => c.name);
+  const handleChannels = uniqueChannels.filter((c) => c.type === 'handle').map((c) => c.name)
+  const onChannels = uniqueChannels.filter((c) => c.type === 'on').map((c) => c.name)
 
   const result: GenerationResult = {
     handlersPath: options.handlers,
@@ -333,106 +326,97 @@ async function generate(options: GenerateOptions): Promise<GenerationResult> {
     handleChannels,
     onChannels,
     generated: false,
-  };
+  }
 
   if (options.validate) {
     // Validation mode: compare against existing types
-    result.validation = await validateTypes(options.output, uniqueChannels);
+    result.validation = await validateTypes(options.output, uniqueChannels)
   } else {
     // Generation mode: write type definitions
-    const typeContent = generateTypeDefinitions(uniqueChannels);
+    const typeContent = generateTypeDefinitions(uniqueChannels)
 
     // Ensure output directory exists
-    const outputDir = options.output.substring(
-      0,
-      options.output.lastIndexOf("/")
-    );
+    const outputDir = options.output.substring(0, options.output.lastIndexOf('/'))
     if (outputDir) {
       try {
-        await Deno.mkdir(outputDir, { recursive: true });
+        await Deno.mkdir(outputDir, { recursive: true })
       } catch (error) {
         if (!(error instanceof Deno.errors.AlreadyExists)) {
-          throw error;
+          throw error
         }
       }
     }
 
-    await Deno.writeTextFile(options.output, typeContent);
-    result.generated = true;
+    await Deno.writeTextFile(options.output, typeContent)
+    result.generated = true
   }
 
-  return result;
+  return result
 }
 
 // === Output Formatting ===
 function formatHumanOutput(result: GenerationResult): void {
-  console.log("\nIPC TYPE GENERATION REPORT");
-  console.log("==========================\n");
-  console.log(`Handlers path: ${result.handlersPath}`);
-  console.log(`Output path:   ${result.outputPath}`);
-  console.log(`Files scanned: ${result.filesScanned}`);
-  console.log();
+  console.log('\nIPC TYPE GENERATION REPORT')
+  console.log('==========================\n')
+  console.log(`Handlers path: ${result.handlersPath}`)
+  console.log(`Output path:   ${result.outputPath}`)
+  console.log(`Files scanned: ${result.filesScanned}`)
+  console.log()
 
-  console.log("DISCOVERED CHANNELS:");
-  console.log();
+  console.log('DISCOVERED CHANNELS:')
+  console.log()
 
   if (result.channels.length === 0) {
-    console.log("  No IPC channels found.");
-    console.log();
-    return;
+    console.log('  No IPC channels found.')
+    console.log()
+    return
   }
 
   if (result.handleChannels.length > 0) {
-    console.log("  Invoke/Handle channels:");
+    console.log('  Invoke/Handle channels:')
     for (const channel of result.handleChannels) {
-      const info = result.channels.find((c) => c.name === channel);
-      console.log(`    '${channel}' (${info?.file}:${info?.line})`);
+      const info = result.channels.find((c) => c.name === channel)
+      console.log(`    '${channel}' (${info?.file}:${info?.line})`)
     }
-    console.log();
+    console.log()
   }
 
   if (result.onChannels.length > 0) {
-    console.log("  Event channels:");
+    console.log('  Event channels:')
     for (const channel of result.onChannels) {
-      const info = result.channels.find((c) => c.name === channel);
-      console.log(`    '${channel}' (${info?.file}:${info?.line})`);
+      const info = result.channels.find((c) => c.name === channel)
+      console.log(`    '${channel}' (${info?.file}:${info?.line})`)
     }
-    console.log();
+    console.log()
   }
 
   console.log(
-    `  Total: ${result.handleChannels.length} invoke + ${result.onChannels.length} event = ${result.channels.length} channels`
-  );
-  console.log();
+    `  Total: ${result.handleChannels.length} invoke + ${result.onChannels.length} event = ${result.channels.length} channels`,
+  )
+  console.log()
 
   if (result.validation) {
-    console.log("VALIDATION RESULT:");
-    console.log();
+    console.log('VALIDATION RESULT:')
+    console.log()
     if (result.validation.valid) {
-      console.log("  Types are in sync with handlers.");
+      console.log('  Types are in sync with handlers.')
     } else {
-      console.log(
-        `  ${result.validation.mismatches.length} mismatch(es) found:`
-      );
-      console.log();
+      console.log(`  ${result.validation.mismatches.length} mismatch(es) found:`)
+      console.log()
       for (const mismatch of result.validation.mismatches) {
-        const label = `[${mismatch.issue.toUpperCase()}]`.padEnd(24);
-        console.log(`  ${label} ${mismatch.detail}`);
+        const label = `[${mismatch.issue.toUpperCase()}]`.padEnd(24)
+        console.log(`  ${label} ${mismatch.detail}`)
       }
     }
-    console.log();
+    console.log()
   } else if (result.generated) {
-    console.log(`Type definitions written to: ${result.outputPath}`);
-    console.log();
-    console.log("NEXT STEPS:");
-    console.log("  1. Review the generated types");
-    console.log(
-      "  2. Replace 'unknown' types with specific types for each channel"
-    );
-    console.log(
-      "  3. Import and use TypedElectronAPI in your preload script"
-    );
-    console.log();
+    console.log(`Type definitions written to: ${result.outputPath}`)
+    console.log()
+    console.log('NEXT STEPS:')
+    console.log('  1. Review the generated types')
+    console.log("  2. Replace 'unknown' types with specific types for each channel")
+    console.log('  3. Import and use TypedElectronAPI in your preload script')
+    console.log()
   }
 }
 
@@ -496,72 +480,72 @@ Validation Mode (--validate):
   - Reports channels found in handlers but missing from types
   - Reports channels defined in types but missing from handlers
   - Exit code 1 if mismatches found
-`);
+`)
 }
 
 // === CLI Handler ===
 function parseArgs(args: string[]): GenerateOptions | null {
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
-    return null;
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+    return null
   }
 
   const options: GenerateOptions = {
-    handlers: "",
-    output: "",
+    handlers: '',
+    output: '',
     validate: false,
     json: false,
-  };
+  }
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = args[i]
 
-    if (arg === "--handlers" && i + 1 < args.length) {
-      options.handlers = args[++i];
-    } else if (arg === "--output" && i + 1 < args.length) {
-      options.output = args[++i];
-    } else if (arg === "--validate") {
-      options.validate = true;
-    } else if (arg === "--json") {
-      options.json = true;
+    if (arg === '--handlers' && i + 1 < args.length) {
+      options.handlers = args[++i]
+    } else if (arg === '--output' && i + 1 < args.length) {
+      options.output = args[++i]
+    } else if (arg === '--validate') {
+      options.validate = true
+    } else if (arg === '--json') {
+      options.json = true
     }
   }
 
   if (!options.handlers) {
-    console.error("Error: --handlers is required");
-    return null;
+    console.error('Error: --handlers is required')
+    return null
   }
 
   if (!options.output) {
-    console.error("Error: --output is required");
-    return null;
+    console.error('Error: --output is required')
+    return null
   }
 
-  return options;
+  return options
 }
 
 // === Entry Point ===
 async function main(): Promise<void> {
-  const options = parseArgs(Deno.args);
+  const options = parseArgs(Deno.args)
 
   if (!options) {
-    printHelp();
-    Deno.exit(0);
+    printHelp()
+    Deno.exit(0)
   }
 
-  const result = await generate(options);
+  const result = await generate(options)
 
   if (options.json) {
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2))
   } else {
-    formatHumanOutput(result);
+    formatHumanOutput(result)
   }
 
   // Exit with error code if validation found mismatches
   if (result.validation && !result.validation.valid) {
-    Deno.exit(1);
+    Deno.exit(1)
   }
 }
 
 if (import.meta.main) {
-  main();
+  main()
 }

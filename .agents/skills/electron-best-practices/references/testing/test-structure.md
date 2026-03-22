@@ -14,7 +14,7 @@ independent environments, setup files, and include patterns.
 
 ```typescript
 // vitest.config.ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
@@ -39,7 +39,7 @@ export default defineConfig({
       },
     ],
   },
-});
+})
 ```
 
 ---
@@ -51,7 +51,7 @@ importing any main process module does not throw.
 
 ```typescript
 // tests/setup/main-setup.ts
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
 vi.mock('electron', () => ({
   app: {
@@ -77,7 +77,7 @@ vi.mock('electron', () => ({
     showSaveDialog: vi.fn(),
     showMessageBox: vi.fn(),
   },
-}));
+}))
 ```
 
 Extend this mock as your application uses additional modules like `Menu`,
@@ -92,7 +92,7 @@ preload script via `contextBridge.exposeInMainWorld`.
 
 ```typescript
 // tests/setup/renderer-setup.ts
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
 // Mock window.electronAPI
 Object.defineProperty(window, 'electronAPI', {
@@ -103,7 +103,7 @@ Object.defineProperty(window, 'electronAPI', {
     onStateChange: vi.fn().mockReturnValue(() => {}),
   },
   writable: true,
-});
+})
 ```
 
 Mark `electronAPI` as `writable: true` so individual tests can override
@@ -118,20 +118,25 @@ Map-based implementation:
 
 ```typescript
 // tests/mocks/electron-store.ts
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
-const store = new Map<string, unknown>();
+const store = new Map<string, unknown>()
 
 const ElectronStore = vi.fn().mockImplementation(() => ({
   get: vi.fn((key: string, defaultValue?: unknown) =>
-    store.has(key) ? store.get(key) : defaultValue),
-  set: vi.fn((key: string, value: unknown) => { store.set(key, value); }),
-  delete: vi.fn((key: string) => { store.delete(key); }),
+    store.has(key) ? store.get(key) : defaultValue,
+  ),
+  set: vi.fn((key: string, value: unknown) => {
+    store.set(key, value)
+  }),
+  delete: vi.fn((key: string) => {
+    store.delete(key)
+  }),
   has: vi.fn((key: string) => store.has(key)),
   clear: vi.fn(() => store.clear()),
-}));
+}))
 
-export default ElectronStore;
+export default ElectronStore
 ```
 
 ---
@@ -143,43 +148,45 @@ launching the full app by connecting handlers and invokers in memory.
 
 ```typescript
 // tests/helpers/mock-ipc-bridge.ts
-import { vi } from 'vitest';
+import { vi } from 'vitest'
 
-type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
-const handlers = new Map<string, Handler>();
-const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
+type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>
+const handlers = new Map<string, Handler>()
+const listeners = new Map<string, Set<(...args: unknown[]) => void>>()
 
 export const mockIpcMain = {
   handle: vi.fn((channel: string, handler: Handler) => {
-    handlers.set(channel, handler);
+    handlers.set(channel, handler)
   }),
-  removeHandler: vi.fn((channel: string) => { handlers.delete(channel); }),
+  removeHandler: vi.fn((channel: string) => {
+    handlers.delete(channel)
+  }),
   on: vi.fn(),
-};
+}
 
 export const mockIpcRenderer = {
   invoke: vi.fn(async (channel: string, ...args: unknown[]) => {
-    const handler = handlers.get(channel);
-    if (!handler) throw new Error(`No handler for channel: ${channel}`);
-    return handler({}, ...args);
+    const handler = handlers.get(channel)
+    if (!handler) throw new Error(`No handler for channel: ${channel}`)
+    return handler({}, ...args)
   }),
   on: vi.fn((channel: string, callback: (...args: unknown[]) => void) => {
-    if (!listeners.has(channel)) listeners.set(channel, new Set());
-    listeners.get(channel)!.add(callback);
+    if (!listeners.has(channel)) listeners.set(channel, new Set())
+    listeners.get(channel)!.add(callback)
   }),
   removeListener: vi.fn((channel: string, callback: (...args: unknown[]) => void) => {
-    listeners.get(channel)?.delete(callback);
+    listeners.get(channel)?.delete(callback)
   }),
-};
+}
 
 export function emitToRenderer(channel: string, ...args: unknown[]) {
-  listeners.get(channel)?.forEach((cb) => cb({}, ...args));
+  listeners.get(channel)?.forEach((cb) => cb({}, ...args))
 }
 
 export function resetMockIpc() {
-  handlers.clear();
-  listeners.clear();
-  vi.clearAllMocks();
+  handlers.clear()
+  listeners.clear()
+  vi.clearAllMocks()
 }
 ```
 
@@ -189,16 +196,19 @@ vi.mock('electron', () => ({
   ipcMain: mockIpcMain,
   ipcRenderer: mockIpcRenderer,
   dialog: { showSaveDialog: vi.fn() },
-}));
+}))
 
-import { registerFileHandlers } from '../../../src/main/ipc/file-handlers';
+import { registerFileHandlers } from '../../../src/main/ipc/file-handlers'
 
-beforeEach(() => { resetMockIpc(); registerFileHandlers(); });
+beforeEach(() => {
+  resetMockIpc()
+  registerFileHandlers()
+})
 
 it('round-trips through the IPC bridge', async () => {
-  const result = await mockIpcRenderer.invoke('save-file', 'content');
-  expect(result).toHaveProperty('success');
-});
+  const result = await mockIpcRenderer.invoke('save-file', 'content')
+  expect(result).toHaveProperty('success')
+})
 ```
 
 ---
@@ -210,15 +220,17 @@ Use factory functions rather than static objects so each test gets a fresh copy.
 ```typescript
 // tests/fixtures/test-data.ts
 export function createTestUser(overrides: Partial<User> = {}): User {
-  return { id: 'user-001', name: 'Test User', email: 'test@example.com', ...overrides };
+  return { id: 'user-001', name: 'Test User', email: 'test@example.com', ...overrides }
 }
 
 export function createTestDocument(overrides: Partial<Document> = {}): Document {
   return {
-    id: 'doc-001', title: 'Test Document', content: 'Lorem ipsum.',
+    id: 'doc-001',
+    title: 'Test Document',
+    content: 'Lorem ipsum.',
     createdAt: new Date('2025-01-01').toISOString(),
     ...overrides,
-  };
+  }
 }
 ```
 
@@ -282,8 +294,8 @@ Add convenience scripts to `package.json`:
     "test:main": "vitest run --project main",
     "test:renderer": "vitest run --project renderer",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
-  }
+    "test:e2e": "playwright test",
+  },
 }
 ```
 

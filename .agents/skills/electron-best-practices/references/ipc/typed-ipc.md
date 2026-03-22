@@ -19,12 +19,12 @@ Without type safety, IPC channels are just strings:
 
 ```typescript
 // renderer - sends a number
-window.electronAPI.invoke('get-user', 42);
+window.electronAPI.invoke('get-user', 42)
 
 // main - expects a string
 ipcMain.handle('get-user', (_event, id: string) => {
-  return db.findUser(id); // id is actually 42, not "42"
-});
+  return db.findUser(id) // id is actually 42, not "42"
+})
 ```
 
 Common failure modes in untyped IPC:
@@ -48,15 +48,15 @@ return type. This lives in a shared module imported by both main and renderer co
 // shared/ipc-types.ts
 
 export interface User {
-  id: string;
-  name: string;
-  email: string;
+  id: string
+  name: string
+  email: string
 }
 
 export interface Document {
-  id: string;
-  title: string;
-  content: string;
+  id: string
+  title: string
+  content: string
 }
 
 /**
@@ -65,26 +65,26 @@ export interface Document {
  */
 export type IpcChannelMap = {
   'get-user': {
-    args: [id: string];
-    return: User | null;
-  };
+    args: [id: string]
+    return: User | null
+  }
   'save-document': {
-    args: [doc: Document];
-    return: { success: boolean; path: string };
-  };
+    args: [doc: Document]
+    return: { success: boolean; path: string }
+  }
   'get-app-version': {
-    args: [];
-    return: string;
-  };
+    args: []
+    return: string
+  }
   'read-file': {
-    args: [filePath: string, encoding: BufferEncoding];
-    return: string;
-  };
+    args: [filePath: string, encoding: BufferEncoding]
+    return: string
+  }
   'list-recent-files': {
-    args: [];
-    return: Array<{ name: string; path: string; modified: number }>;
-  };
-};
+    args: []
+    return: Array<{ name: string; path: string; modified: number }>
+  }
+}
 ```
 
 This type serves as the contract. Every layer of the application references it.
@@ -104,11 +104,11 @@ separate map without return types:
  * Used for send/on patterns where no response is expected.
  */
 export type IpcEventMap = {
-  'download-progress': { args: [percent: number] };
-  'state-changed': { args: [key: string, value: unknown] };
-  'notification': { args: [title: string, body: string] };
-  'window-focus-changed': { args: [focused: boolean] };
-};
+  'download-progress': { args: [percent: number] }
+  'state-changed': { args: [key: string, value: unknown] }
+  notification: { args: [title: string, body: string] }
+  'window-focus-changed': { args: [focused: boolean] }
+}
 ```
 
 ---
@@ -119,8 +119,8 @@ Wrap `ipcMain.handle` to enforce that the handler signature matches the channel 
 
 ```typescript
 // main/ipc-handler.ts
-import { ipcMain, type BrowserWindow } from 'electron';
-import type { IpcChannelMap, IpcEventMap } from '../shared/ipc-types';
+import { ipcMain, type BrowserWindow } from 'electron'
+import type { IpcChannelMap, IpcEventMap } from '../shared/ipc-types'
 
 /**
  * Register a typed invoke/handle pair.
@@ -130,18 +130,18 @@ export function handleIpc<K extends keyof IpcChannelMap>(
   channel: K,
   handler: (
     ...args: IpcChannelMap[K]['args']
-  ) => Promise<IpcChannelMap[K]['return']> | IpcChannelMap[K]['return']
+  ) => Promise<IpcChannelMap[K]['return']> | IpcChannelMap[K]['return'],
 ): void {
   ipcMain.handle(channel, (_event, ...args) => {
-    return handler(...(args as IpcChannelMap[K]['args']));
-  });
+    return handler(...(args as IpcChannelMap[K]['args']))
+  })
 }
 
 /**
  * Remove a typed handler.
  */
 export function removeHandler<K extends keyof IpcChannelMap>(channel: K): void {
-  ipcMain.removeHandler(channel);
+  ipcMain.removeHandler(channel)
 }
 
 /**
@@ -152,7 +152,7 @@ export function sendToRenderer<K extends keyof IpcEventMap>(
   channel: K,
   ...args: IpcEventMap[K]['args']
 ): void {
-  window.webContents.send(channel, ...args);
+  window.webContents.send(channel, ...args)
 }
 ```
 
@@ -160,26 +160,26 @@ Usage in the main process:
 
 ```typescript
 // main/handlers/user-handlers.ts
-import { handleIpc } from '../ipc-handler';
-import { getUserById } from '../services/user-service';
+import { handleIpc } from '../ipc-handler'
+import { getUserById } from '../services/user-service'
 
 handleIpc('get-user', async (id) => {
   // id is inferred as string
   // return type must be User | null
-  return getUserById(id);
-});
+  return getUserById(id)
+})
 
 handleIpc('get-app-version', () => {
   // no args, must return string
-  return app.getVersion();
-});
+  return app.getVersion()
+})
 
 // Type error: argument type mismatch
 handleIpc('get-user', async (id: number) => {
   //                          ^^^^^^^^^^
   // Error: Type 'number' is not assignable to type 'string'
-  return null;
-});
+  return null
+})
 ```
 
 ---
@@ -191,8 +191,8 @@ ensure the exposed API matches the channel contracts:
 
 ```typescript
 // preload/index.ts
-import { contextBridge, ipcRenderer } from 'electron';
-import type { IpcChannelMap, IpcEventMap } from '../shared/ipc-types';
+import { contextBridge, ipcRenderer } from 'electron'
+import type { IpcChannelMap, IpcEventMap } from '../shared/ipc-types'
 
 /**
  * Type-safe invoke wrapper.
@@ -201,7 +201,7 @@ function typedInvoke<K extends keyof IpcChannelMap>(
   channel: K,
   ...args: IpcChannelMap[K]['args']
 ): Promise<IpcChannelMap[K]['return']> {
-  return ipcRenderer.invoke(channel, ...args);
+  return ipcRenderer.invoke(channel, ...args)
 }
 
 /**
@@ -209,13 +209,13 @@ function typedInvoke<K extends keyof IpcChannelMap>(
  */
 function typedOn<K extends keyof IpcEventMap>(
   channel: K,
-  callback: (...args: IpcEventMap[K]['args']) => void
+  callback: (...args: IpcEventMap[K]['args']) => void,
 ): () => void {
   const listener = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => {
-    callback(...(args as IpcEventMap[K]['args']));
-  };
-  ipcRenderer.on(channel, listener);
-  return () => ipcRenderer.removeListener(channel, listener);
+    callback(...(args as IpcEventMap[K]['args']))
+  }
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
 }
 
 // Expose typed API to renderer
@@ -224,19 +224,16 @@ const electronAPI = {
   saveDocument: (doc: Parameters<typeof typedInvoke<'save-document'>>[1]) =>
     typedInvoke('save-document', doc),
   getAppVersion: () => typedInvoke('get-app-version'),
-  readFile: (path: string, encoding: BufferEncoding) =>
-    typedInvoke('read-file', path, encoding),
+  readFile: (path: string, encoding: BufferEncoding) => typedInvoke('read-file', path, encoding),
   listRecentFiles: () => typedInvoke('list-recent-files'),
 
-  onDownloadProgress: (cb: (percent: number) => void) =>
-    typedOn('download-progress', cb),
-  onStateChanged: (cb: (key: string, value: unknown) => void) =>
-    typedOn('state-changed', cb),
-};
+  onDownloadProgress: (cb: (percent: number) => void) => typedOn('download-progress', cb),
+  onStateChanged: (cb: (key: string, value: unknown) => void) => typedOn('state-changed', cb),
+}
 
-export type ElectronAPI = typeof electronAPI;
+export type ElectronAPI = typeof electronAPI
 
-contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld('electronAPI', electronAPI)
 ```
 
 ---
@@ -248,11 +245,11 @@ full type information:
 
 ```typescript
 // renderer/global.d.ts
-import type { ElectronAPI } from '../preload/index';
+import type { ElectronAPI } from '../preload/index'
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI: ElectronAPI
   }
 }
 ```
@@ -262,20 +259,20 @@ Usage in the renderer:
 ```typescript
 // renderer/components/UserProfile.tsx
 async function loadUser(id: string) {
-  const user = await window.electronAPI.getUser(id);
+  const user = await window.electronAPI.getUser(id)
   // user is typed as User | null
   if (user) {
-    setName(user.name);
+    setName(user.name)
   }
 }
 
 // Type error: wrong argument type
-await window.electronAPI.getUser(42);
+await window.electronAPI.getUser(42)
 //                                ^^
 // Error: Argument of type 'number' is not assignable to type 'string'
 
 // Type error: missing argument
-await window.electronAPI.readFile('/path/to/file');
+await window.electronAPI.readFile('/path/to/file')
 // Error: Expected 2 arguments, but got 1
 ```
 
@@ -292,10 +289,10 @@ To add a new `delete-document` channel, you touch exactly three places:
 export type IpcChannelMap = {
   // ...existing channels...
   'delete-document': {
-    args: [documentId: string, permanent: boolean];
-    return: { deleted: boolean };
-  };
-};
+    args: [documentId: string, permanent: boolean]
+    return: { deleted: boolean }
+  }
+}
 ```
 
 **Step 2** -- Register the handler:
@@ -304,9 +301,9 @@ export type IpcChannelMap = {
 // main/handlers/document-handlers.ts
 handleIpc('delete-document', async (documentId, permanent) => {
   // documentId: string, permanent: boolean -- inferred from map
-  const deleted = await documentService.delete(documentId, { permanent });
-  return { deleted };
-});
+  const deleted = await documentService.delete(documentId, { permanent })
+  return { deleted }
+})
 ```
 
 **Step 3** -- Expose in preload:
@@ -323,16 +320,16 @@ If any layer has a type mismatch, the compiler catches it immediately.
 
 ## Tradeoffs vs electron-trpc
 
-| Aspect | Manual Typed IPC | electron-trpc |
-|--------|-----------------|---------------|
-| Setup complexity | Low -- just TypeScript types | Medium -- tRPC + Zod + link setup |
-| Runtime validation | None (compile-time only) | Full Zod validation at runtime |
-| Bundle size | Zero additional deps | tRPC + Zod (~30-50KB) |
-| Boilerplate | More manual wiring | Less -- auto-generated client |
-| Subscriptions | Manual event wiring | Built-in observable support |
-| React integration | Manual state management | React Query hooks out of the box |
-| Refactoring safety | Good (compile-time) | Better (runtime + compile-time) |
-| Learning curve | Low (just TypeScript) | Medium (tRPC concepts) |
+| Aspect             | Manual Typed IPC             | electron-trpc                     |
+| ------------------ | ---------------------------- | --------------------------------- |
+| Setup complexity   | Low -- just TypeScript types | Medium -- tRPC + Zod + link setup |
+| Runtime validation | None (compile-time only)     | Full Zod validation at runtime    |
+| Bundle size        | Zero additional deps         | tRPC + Zod (~30-50KB)             |
+| Boilerplate        | More manual wiring           | Less -- auto-generated client     |
+| Subscriptions      | Manual event wiring          | Built-in observable support       |
+| React integration  | Manual state management      | React Query hooks out of the box  |
+| Refactoring safety | Good (compile-time)          | Better (runtime + compile-time)   |
+| Learning curve     | Low (just TypeScript)        | Medium (tRPC concepts)            |
 
 Use manual typed IPC when you want zero dependencies and full control over the
 IPC layer. Use electron-trpc when your app has many channels and you want

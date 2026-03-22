@@ -180,7 +180,7 @@ Only sign on tag pushes (releases), not on every PR:
 
 ```javascript
 // forge.config.js
-const shouldSign = process.env.APPLE_ID && process.env.APPLE_PASSWORD;
+const shouldSign = process.env.APPLE_ID && process.env.APPLE_PASSWORD
 
 module.exports = {
   packagerConfig: {
@@ -198,22 +198,22 @@ module.exports = {
       },
     }),
   },
-};
+}
 ```
 
 ---
 
 ## Secrets Management
 
-| Secret | Platform | Purpose |
-|--------|----------|---------|
-| `CERTIFICATE_P12` | macOS | Base64-encoded .p12 signing certificate |
-| `CERTIFICATE_PASSWORD` | macOS | Password for the .p12 file |
-| `APPLE_ID` | macOS | Apple Developer account email |
-| `APPLE_PASSWORD` | macOS | App-specific password for notarization |
-| `APPLE_TEAM_ID` | macOS | Apple Developer team identifier |
-| `WINDOWS_CERTIFICATE_P12` | Windows | Base64-encoded .pfx certificate |
-| `WINDOWS_CERTIFICATE_PASSWORD` | Windows | Password for the .pfx file |
+| Secret                         | Platform | Purpose                                 |
+| ------------------------------ | -------- | --------------------------------------- |
+| `CERTIFICATE_P12`              | macOS    | Base64-encoded .p12 signing certificate |
+| `CERTIFICATE_PASSWORD`         | macOS    | Password for the .p12 file              |
+| `APPLE_ID`                     | macOS    | Apple Developer account email           |
+| `APPLE_PASSWORD`               | macOS    | App-specific password for notarization  |
+| `APPLE_TEAM_ID`                | macOS    | Apple Developer team identifier         |
+| `WINDOWS_CERTIFICATE_P12`      | Windows  | Base64-encoded .pfx certificate         |
+| `WINDOWS_CERTIFICATE_PASSWORD` | Windows  | Password for the .pfx file              |
 
 ```bash
 # Encode certificates for storage as GitHub secrets
@@ -228,26 +228,30 @@ base64 -i certificate.p12 -o certificate-base64.txt    # macOS
 ```javascript
 // forge.config.js - GitHub Releases
 module.exports = {
-  publishers: [{
-    name: '@electron-forge/publisher-github',
-    config: {
-      repository: { owner: 'your-org', name: 'your-app' },
-      draft: true,
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: { owner: 'your-org', name: 'your-app' },
+        draft: true,
+      },
     },
-  }],
-};
+  ],
+}
 
 // forge.config.js - S3
 module.exports = {
-  publishers: [{
-    name: '@electron-forge/publisher-s3',
-    config: {
-      bucket: 'your-app-releases',
-      region: 'us-east-1',
-      public: true,
+  publishers: [
+    {
+      name: '@electron-forge/publisher-s3',
+      config: {
+        bucket: 'your-app-releases',
+        region: 'us-east-1',
+        public: true,
+      },
     },
-  }],
-};
+  ],
+}
 ```
 
 ---
@@ -272,7 +276,7 @@ Skip expensive steps on PRs:
   if: startsWith(github.ref, 'refs/tags/')
   run: npm run sign
 
-- name: Test  # Always run tests
+- name: Test # Always run tests
   run: npm run test
 ```
 

@@ -19,21 +19,21 @@
  */
 
 // === Constants ===
-const VERSION = "1.0.0";
-const SCRIPT_NAME = "scaffold-electron-app";
+const VERSION = '1.0.0'
+const SCRIPT_NAME = 'scaffold-electron-app'
 
 // === Types ===
 interface ScaffoldOptions {
-  name: string;
-  path: string;
-  withReact: boolean;
-  withTrpc: boolean;
-  withTests: boolean;
+  name: string
+  path: string
+  withReact: boolean
+  withTrpc: boolean
+  withTests: boolean
 }
 
 interface GeneratedFile {
-  path: string;
-  content: string;
+  path: string
+  content: string
 }
 
 // === Templates ===
@@ -91,7 +91,7 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-`;
+`
 }
 
 function getMainIpcHandlersTs(): string {
@@ -104,7 +104,7 @@ export function registerIpcHandlers(): void {
 
   // Register additional IPC handlers here
 }
-`;
+`
 }
 
 function getPreloadIndexTs(): string {
@@ -116,7 +116,7 @@ const api: ElectronAPI = {
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
-`;
+`
 }
 
 function getPreloadIndexDts(): string {
@@ -129,16 +129,14 @@ declare global {
     electronAPI: ElectronAPI;
   }
 }
-`;
+`
 }
 
 function getRendererIndexHtml(appName: string, withReact: boolean): string {
-  const rootDiv = withReact
-    ? '    <div id="root"></div>'
-    : '    <div id="app"></div>';
+  const rootDiv = withReact ? '    <div id="root"></div>' : '    <div id="app"></div>'
   const scriptTag = withReact
     ? '    <script type="module" src="./src/main.tsx"></script>'
-    : '    <script type="module" src="./src/main.ts"></script>';
+    : '    <script type="module" src="./src/main.ts"></script>'
 
   return `<!doctype html>
 <html lang="en">
@@ -156,7 +154,7 @@ ${rootDiv}
 ${scriptTag}
   </body>
 </html>
-`;
+`
 }
 
 function getRendererMainTsx(): string {
@@ -170,7 +168,7 @@ root.render(
     <App />
   </React.StrictMode>,
 );
-`;
+`
 }
 
 function getRendererAppTsx(appName: string): string {
@@ -192,7 +190,7 @@ function App(): JSX.Element {
 }
 
 export default App;
-`;
+`
 }
 
 function getSharedIpcTypes(): string {
@@ -211,7 +209,7 @@ export type IpcChannelMap = {
 };
 
 export type IpcChannel = keyof IpcChannelMap;
-`;
+`
 }
 
 function getElectronViteConfig(): string {
@@ -235,7 +233,7 @@ export default defineConfig({
     plugins: [react()],
   },
 });
-`;
+`
 }
 
 function getElectronViteConfigNoReact(): string {
@@ -257,63 +255,63 @@ export default defineConfig({
     },
   },
 });
-`;
+`
 }
 
 function getPackageJson(
   appName: string,
   withReact: boolean,
   withTrpc: boolean,
-  withTests: boolean
+  withTests: boolean,
 ): string {
-  const deps: Record<string, string> = {};
+  const deps: Record<string, string> = {}
   const devDeps: Record<string, string> = {
-    electron: "^33.0.0",
-    "electron-vite": "^2.3.0",
-    "@electron-toolkit/utils": "^3.0.0",
-    typescript: "^5.6.0",
-    vite: "^5.4.0",
-  };
+    electron: '^33.0.0',
+    'electron-vite': '^2.3.0',
+    '@electron-toolkit/utils': '^3.0.0',
+    typescript: '^5.6.0',
+    vite: '^5.4.0',
+  }
   const scripts: Record<string, string> = {
-    dev: "electron-vite dev",
-    build: "electron-vite build",
-    start: "electron-vite preview",
-    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    typecheck: "npm run typecheck:node && npm run typecheck:web",
-  };
+    dev: 'electron-vite dev',
+    build: 'electron-vite build',
+    start: 'electron-vite preview',
+    'typecheck:node': 'tsc --noEmit -p tsconfig.node.json',
+    'typecheck:web': 'tsc --noEmit -p tsconfig.web.json',
+    typecheck: 'npm run typecheck:node && npm run typecheck:web',
+  }
 
   if (withReact) {
-    deps["react"] = "^18.3.0";
-    deps["react-dom"] = "^18.3.0";
-    devDeps["@types/react"] = "^18.3.0";
-    devDeps["@types/react-dom"] = "^18.3.0";
-    devDeps["@vitejs/plugin-react"] = "^4.3.0";
+    deps['react'] = '^18.3.0'
+    deps['react-dom'] = '^18.3.0'
+    devDeps['@types/react'] = '^18.3.0'
+    devDeps['@types/react-dom'] = '^18.3.0'
+    devDeps['@vitejs/plugin-react'] = '^4.3.0'
   }
 
   if (withTrpc) {
-    deps["@trpc/server"] = "^10.45.0";
-    deps["@trpc/client"] = "^10.45.0";
-    deps["electron-trpc"] = "^0.6.0";
-    deps["zod"] = "^3.23.0";
+    deps['@trpc/server'] = '^10.45.0'
+    deps['@trpc/client'] = '^10.45.0'
+    deps['electron-trpc'] = '^0.6.0'
+    deps['zod'] = '^3.23.0'
   }
 
   if (withTests) {
-    devDeps["@playwright/test"] = "^1.48.0";
-    scripts["test:e2e"] = "playwright test";
+    devDeps['@playwright/test'] = '^1.48.0'
+    scripts['test:e2e'] = 'playwright test'
   }
 
   const pkg = {
     name: appName,
-    version: "0.1.0",
+    version: '0.1.0',
     private: true,
-    main: "./out/main/index.js",
+    main: './out/main/index.js',
     scripts,
     dependencies: deps,
     devDependencies: devDeps,
-  };
+  }
 
-  return JSON.stringify(pkg, null, 2) + "\n";
+  return JSON.stringify(pkg, null, 2) + '\n'
 }
 
 function getTsconfigJson(): string {
@@ -324,7 +322,7 @@ function getTsconfigJson(): string {
     { "path": "./tsconfig.web.json" }
   ]
 }
-`;
+`
 }
 
 function getTsconfigNodeJson(): string {
@@ -348,7 +346,7 @@ function getTsconfigNodeJson(): string {
     "electron.vite.config.ts"
   ]
 }
-`;
+`
 }
 
 function getTsconfigWebJson(): string {
@@ -374,7 +372,7 @@ function getTsconfigWebJson(): string {
     "src/preload/**/*.d.ts"
   ]
 }
-`;
+`
 }
 
 function getTrpcRouterTs(): string {
@@ -392,7 +390,7 @@ export const router = t.router({
 });
 
 export type AppRouter = typeof router;
-`;
+`
 }
 
 function getTrpcClientTs(): string {
@@ -403,7 +401,7 @@ import type { AppRouter } from '../../main/router';
 export const trpcClient = createTRPCProxyClient<AppRouter>({
   links: [ipcLink()],
 });
-`;
+`
 }
 
 function getPlaywrightConfigTs(): string {
@@ -417,7 +415,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 });
-`;
+`
 }
 
 function getE2eTestTs(appName: string): string {
@@ -435,96 +433,89 @@ test('app launches and shows window', async () => {
 
   await electronApp.close();
 });
-`;
+`
 }
 
 // === File Generation ===
 function generateFiles(options: ScaffoldOptions): GeneratedFile[] {
-  const files: GeneratedFile[] = [];
-  const base = options.path;
+  const files: GeneratedFile[] = []
+  const base = options.path
 
   // Main process
   files.push({
     path: `${base}/src/main/index.ts`,
     content: getMainIndexTs(options.name),
-  });
+  })
   files.push({
     path: `${base}/src/main/ipc-handlers.ts`,
     content: getMainIpcHandlersTs(),
-  });
+  })
 
   // Preload
   files.push({
     path: `${base}/src/preload/index.ts`,
     content: getPreloadIndexTs(),
-  });
+  })
   files.push({
     path: `${base}/src/preload/index.d.ts`,
     content: getPreloadIndexDts(),
-  });
+  })
 
   // Renderer
   files.push({
     path: `${base}/src/renderer/index.html`,
     content: getRendererIndexHtml(options.name, options.withReact),
-  });
+  })
 
   if (options.withReact) {
     files.push({
       path: `${base}/src/renderer/src/main.tsx`,
       content: getRendererMainTsx(),
-    });
+    })
     files.push({
       path: `${base}/src/renderer/src/App.tsx`,
       content: getRendererAppTsx(options.name),
-    });
+    })
   }
 
   // Shared
   files.push({
     path: `${base}/src/shared/ipc-types.ts`,
     content: getSharedIpcTypes(),
-  });
+  })
 
   // Config files
   files.push({
     path: `${base}/electron.vite.config.ts`,
-    content: options.withReact
-      ? getElectronViteConfig()
-      : getElectronViteConfigNoReact(),
-  });
+    content: options.withReact ? getElectronViteConfig() : getElectronViteConfigNoReact(),
+  })
   files.push({
     path: `${base}/package.json`,
-    content: getPackageJson(
-      options.name,
-      options.withReact,
-      options.withTrpc,
-      options.withTests
-    ),
-  });
+    content: getPackageJson(options.name, options.withReact, options.withTrpc, options.withTests),
+  })
   files.push({
     path: `${base}/tsconfig.json`,
     content: getTsconfigJson(),
-  });
+  })
   files.push({
     path: `${base}/tsconfig.node.json`,
     content: getTsconfigNodeJson(),
-  });
+  })
   files.push({
     path: `${base}/tsconfig.web.json`,
     content: getTsconfigWebJson(),
-  });
+  })
 
   // tRPC (optional)
   if (options.withTrpc) {
     files.push({
       path: `${base}/src/main/router.ts`,
       content: getTrpcRouterTs(),
-    });
+    })
     files.push({
       path: `${base}/src/renderer/src/trpc-client.ts`,
       content: getTrpcClientTs(),
-    });
+    })
   }
 
   // Tests (optional)
@@ -532,74 +523,71 @@ function generateFiles(options: ScaffoldOptions): GeneratedFile[] {
     files.push({
       path: `${base}/playwright.config.ts`,
       content: getPlaywrightConfigTs(),
-    });
+    })
     files.push({
       path: `${base}/tests/e2e/app.spec.ts`,
       content: getE2eTestTs(options.name),
-    });
+    })
   }
 
-  return files;
+  return files
 }
 
 // === Directory Creation ===
 async function ensureDir(path: string): Promise<void> {
   try {
-    await Deno.mkdir(path, { recursive: true });
+    await Deno.mkdir(path, { recursive: true })
   } catch (error) {
     if (!(error instanceof Deno.errors.AlreadyExists)) {
-      throw error;
+      throw error
     }
   }
 }
 
 async function writeFiles(files: GeneratedFile[]): Promise<void> {
   for (const file of files) {
-    const dir = file.path.substring(0, file.path.lastIndexOf("/"));
-    await ensureDir(dir);
-    await Deno.writeTextFile(file.path, file.content);
+    const dir = file.path.substring(0, file.path.lastIndexOf('/'))
+    await ensureDir(dir)
+    await Deno.writeTextFile(file.path, file.content)
   }
 }
 
 // === Scaffold ===
 async function scaffold(options: ScaffoldOptions): Promise<GeneratedFile[]> {
   // Create resource directories (even if empty)
-  const base = options.path;
-  await ensureDir(`${base}/resources`);
+  const base = options.path
+  await ensureDir(`${base}/resources`)
 
-  const files = generateFiles(options);
-  await writeFiles(files);
+  const files = generateFiles(options)
+  await writeFiles(files)
 
-  return files;
+  return files
 }
 
 // === Output Formatting ===
-function formatHumanOutput(
-  options: ScaffoldOptions,
-  files: GeneratedFile[]
-): void {
-  console.log("\nELECTRON APP SCAFFOLDED");
-  console.log("=======================\n");
-  console.log(`App name: ${options.name}`);
-  console.log(`Location: ${options.path}`);
-  console.log(`React:    ${options.withReact ? "yes" : "no"}`);
-  console.log(`tRPC:     ${options.withTrpc ? "yes" : "no"}`);
-  console.log(`Tests:    ${options.withTests ? "yes" : "no"}`);
-  console.log();
+function formatHumanOutput(options: ScaffoldOptions, files: GeneratedFile[]): void {
+  console.log('\nELECTRON APP SCAFFOLDED')
+  console.log('=======================\n')
+  console.log(`App name: ${options.name}`)
+  console.log(`Location: ${options.path}`)
+  console.log(`React:    ${options.withReact ? 'yes' : 'no'}`)
+  console.log(`tRPC:     ${options.withTrpc ? 'yes' : 'no'}`)
+  console.log(`Tests:    ${options.withTests ? 'yes' : 'no'}`)
+  console.log()
 
-  console.log("FILES CREATED:");
-  console.log();
+  console.log('FILES CREATED:')
+  console.log()
   for (const file of files) {
-    const relativePath = file.path.replace(options.path + "/", "");
-    console.log(`  ${relativePath}`);
+    const relativePath = file.path.replace(options.path + '/', '')
+    console.log(`  ${relativePath}`)
   }
-  console.log();
+  console.log()
 
-  console.log("NEXT STEPS:");
-  console.log(`  cd ${options.path}`);
-  console.log("  npm install");
-  console.log("  npm run dev");
-  console.log();
+  console.log('NEXT STEPS:')
+  console.log(`  cd ${options.path}`)
+  console.log('  npm install')
+  console.log('  npm run dev')
+  console.log()
 }
 
 // === Help Text ===
@@ -657,59 +645,59 @@ Optional (with --with-trpc):
 Optional (with --with-tests):
   playwright.config.ts               Playwright configuration
   tests/e2e/app.spec.ts              Basic E2E test
-`);
+`)
 }
 
 // === CLI Handler ===
 function parseArgs(args: string[]): ScaffoldOptions | null {
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
-    return null;
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+    return null
   }
 
   const options: ScaffoldOptions = {
-    name: "",
-    path: ".",
+    name: '',
+    path: '.',
     withReact: true,
     withTrpc: false,
     withTests: false,
-  };
+  }
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+    const arg = args[i]
 
-    if (arg === "--name" && i + 1 < args.length) {
-      options.name = args[++i];
-    } else if (arg === "--path" && i + 1 < args.length) {
-      options.path = args[++i];
-    } else if (arg === "--with-react") {
-      options.withReact = true;
-    } else if (arg === "--with-trpc") {
-      options.withTrpc = true;
-    } else if (arg === "--with-tests") {
-      options.withTests = true;
+    if (arg === '--name' && i + 1 < args.length) {
+      options.name = args[++i]
+    } else if (arg === '--path' && i + 1 < args.length) {
+      options.path = args[++i]
+    } else if (arg === '--with-react') {
+      options.withReact = true
+    } else if (arg === '--with-trpc') {
+      options.withTrpc = true
+    } else if (arg === '--with-tests') {
+      options.withTests = true
     }
   }
 
   if (!options.name) {
-    console.error("Error: --name is required");
-    return null;
+    console.error('Error: --name is required')
+    return null
   }
 
-  return options;
+  return options
 }
 
 // === Entry Point ===
 async function main(): Promise<void> {
-  const options = parseArgs(Deno.args);
+  const options = parseArgs(Deno.args)
 
   if (!options) {
-    printHelp();
-    Deno.exit(0);
+    printHelp()
+    Deno.exit(0)
   }
 
-  const files = await scaffold(options);
+  const files = await scaffold(options)
 
-  const jsonFlag = Deno.args.includes("--json");
+  const jsonFlag = Deno.args.includes('--json')
   if (jsonFlag) {
     const result = {
       name: options.name,
@@ -718,13 +706,13 @@ async function main(): Promise<void> {
       withTrpc: options.withTrpc,
       withTests: options.withTests,
       filesCreated: files.map((f) => f.path),
-    };
-    console.log(JSON.stringify(result, null, 2));
+    }
+    console.log(JSON.stringify(result, null, 2))
   } else {
-    formatHumanOutput(options, files);
+    formatHumanOutput(options, files)
   }
 }
 
 if (import.meta.main) {
-  main();
+  main()
 }

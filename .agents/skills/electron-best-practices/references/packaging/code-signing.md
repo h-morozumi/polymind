@@ -59,7 +59,7 @@ module.exports = {
       teamId: process.env.APPLE_TEAM_ID,
     },
   },
-};
+}
 ```
 
 ### Apple ID and App-Specific Password
@@ -94,15 +94,19 @@ Common causes and fixes:
 // forge.config.js - Universal macOS build
 module.exports = {
   packagerConfig: {
-    osxSign: { /* ... signing config ... */ },
-    osxNotarize: { /* ... notarize config ... */ },
+    osxSign: {
+      /* ... signing config ... */
+    },
+    osxNotarize: {
+      /* ... notarize config ... */
+    },
     osxUniversal: { x64ArchFiles: '*.node' },
   },
   makers: [
     { name: '@electron-forge/maker-dmg', config: { format: 'ULFO' } },
     { name: '@electron-forge/maker-zip', platforms: ['darwin'] },
   ],
-};
+}
 ```
 
 ```bash
@@ -157,12 +161,13 @@ AzureSignTool sign \
 module.exports = {
   hooks: {
     postPackage: async (config, result) => {
-      if (result.platform !== 'win32') return;
-      const { execSync } = require('child_process');
-      const glob = require('glob');
+      if (result.platform !== 'win32') return
+      const { execSync } = require('child_process')
+      const glob = require('glob')
       const files = glob.sync('**/*.{exe,dll}', {
-        cwd: result.outputPaths[0], absolute: true,
-      });
+        cwd: result.outputPaths[0],
+        absolute: true,
+      })
       for (const file of files) {
         execSync(`AzureSignTool sign \
           --azure-key-vault-url "${process.env.AZURE_VAULT_URL}" \
@@ -171,11 +176,11 @@ module.exports = {
           --azure-key-vault-tenant-id "${process.env.AZURE_TENANT_ID}" \
           --azure-key-vault-certificate "${process.env.AZURE_CERT_NAME}" \
           --timestamp-rfc3161 "http://timestamp.digicert.com" \
-          --file-digest sha256 "${file}"`);
+          --file-digest sha256 "${file}"`)
       }
     },
   },
-};
+}
 ```
 
 ---
@@ -221,14 +226,14 @@ rm -f certificate.p12
 
 ## Common Issues
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| "App is damaged" on macOS | Missing or invalid signature | Rebuild with correct identity |
-| Notarization timeout | Large app or Apple service delays | Retry; check Apple system status |
-| Expired certificate | Certificate past validity date | Renew through Apple/CA portal |
-| SmartScreen blocks EXE | No EV certificate or new cert | Use EV cert; reputation builds over time |
-| "Identity not found" in CI | Keychain not configured | Import cert into CI keychain first |
-| Hardened runtime crash | Missing entitlement | Add required entitlement to plist |
+| Issue                      | Cause                             | Fix                                      |
+| -------------------------- | --------------------------------- | ---------------------------------------- |
+| "App is damaged" on macOS  | Missing or invalid signature      | Rebuild with correct identity            |
+| Notarization timeout       | Large app or Apple service delays | Retry; check Apple system status         |
+| Expired certificate        | Certificate past validity date    | Renew through Apple/CA portal            |
+| SmartScreen blocks EXE     | No EV certificate or new cert     | Use EV cert; reputation builds over time |
+| "Identity not found" in CI | Keychain not configured           | Import cert into CI keychain first       |
+| Hardened runtime crash     | Missing entitlement               | Add required entitlement to plist        |
 
 ---
 

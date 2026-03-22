@@ -111,14 +111,14 @@ preload are rebuilt on change without a full app restart.
 
 ```typescript
 // electron.vite.config.ts
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: { plugins: [externalizeDepsPlugin()] },
   preload: { plugins: [externalizeDepsPlugin()] },
   renderer: { plugins: [react()] }, // Enables Fast Refresh
-});
+})
 ```
 
 Fast Refresh re-runs effects on every save. Correct cleanup means seamless HMR;
@@ -212,18 +212,18 @@ function App() {
 ```typescript
 // Window focus awareness -- throttle work when unfocused
 function useWindowFocus(): boolean {
-  const [isFocused, setIsFocused] = useState(document.hasFocus());
+  const [isFocused, setIsFocused] = useState(document.hasFocus())
   useEffect(() => {
-    const onFocus = () => setIsFocused(true);
-    const onBlur = () => setIsFocused(false);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('blur', onBlur);
+    const onFocus = () => setIsFocused(true)
+    const onBlur = () => setIsFocused(false)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
     return () => {
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
-  return isFocused;
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [])
+  return isFocused
 }
 ```
 
@@ -232,11 +232,14 @@ function useWindowFocus(): boolean {
 function useBeforeUnload(shouldBlock: () => boolean) {
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (shouldBlock()) { e.preventDefault(); e.returnValue = ''; }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [shouldBlock]);
+      if (shouldBlock()) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [shouldBlock])
 }
 ```
 

@@ -60,10 +60,10 @@ and accesses system APIs (file system, native dialogs, notifications).
 
 ```typescript
 // src/main/index.ts
-import { app, BrowserWindow } from 'electron';
-import { join } from 'path';
-import { registerFileHandlers } from './ipc/file-handlers';
-import { registerAppHandlers } from './ipc/app-handlers';
+import { app, BrowserWindow } from 'electron'
+import { join } from 'path'
+import { registerFileHandlers } from './ipc/file-handlers'
+import { registerAppHandlers } from './ipc/app-handlers'
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -75,27 +75,27 @@ function createWindow(): BrowserWindow {
       sandbox: true,
       nodeIntegration: false,
     },
-  });
+  })
 
   // electron-vite handles dev server vs production file loading
   if (process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'));
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  return win;
+  return win
 }
 
 app.whenReady().then(() => {
-  registerFileHandlers();
-  registerAppHandlers();
-  createWindow();
-});
+  registerFileHandlers()
+  registerAppHandlers()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  if (process.platform !== 'darwin') app.quit()
+})
 ```
 
 Organize IPC handlers into separate modules under `src/main/ipc/` by domain.
@@ -103,44 +103,44 @@ This keeps the main entry file focused on lifecycle and window management.
 
 ```typescript
 // src/main/ipc/file-handlers.ts
-import { ipcMain, dialog } from 'electron';
-import { readFile, writeFile } from 'fs/promises';
+import { ipcMain, dialog } from 'electron'
+import { readFile, writeFile } from 'fs/promises'
 
 export function registerFileHandlers(): void {
   ipcMain.handle('save-file', async (_event, content: string) => {
     const { canceled, filePath } = await dialog.showSaveDialog({
       filters: [{ name: 'Text', extensions: ['txt'] }],
-    });
+    })
 
     if (canceled || !filePath) {
-      return { success: false, error: 'Save cancelled' };
+      return { success: false, error: 'Save cancelled' }
     }
 
     try {
-      await writeFile(filePath, content, 'utf-8');
-      return { success: true, data: filePath };
+      await writeFile(filePath, content, 'utf-8')
+      return { success: true, data: filePath }
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return { success: false, error: (err as Error).message }
     }
-  });
+  })
 
   ipcMain.handle('open-file', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openFile'],
       filters: [{ name: 'Text', extensions: ['txt', 'md'] }],
-    });
+    })
 
     if (canceled || filePaths.length === 0) {
-      return { success: false, error: 'Open cancelled' };
+      return { success: false, error: 'Open cancelled' }
     }
 
     try {
-      const content = await readFile(filePaths[0], 'utf-8');
-      return { success: true, data: { path: filePaths[0], content } };
+      const content = await readFile(filePaths[0], 'utf-8')
+      return { success: true, data: { path: filePaths[0], content } }
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return { success: false, error: (err as Error).message }
     }
-  });
+  })
 }
 ```
 
@@ -152,7 +152,7 @@ thin -- they should only translate between IPC calls and the exposed API.
 
 ```typescript
 // src/preload/index.ts
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Request-response (invoke/handle)
@@ -161,24 +161,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Event subscriptions (returns cleanup function)
   onFileChanged: (callback: (path: string) => void) => {
-    const handler = (_event: IpcRendererEvent, path: string) => callback(path);
-    ipcRenderer.on('file-changed', handler);
-    return () => ipcRenderer.removeListener('file-changed', handler);
+    const handler = (_event: IpcRendererEvent, path: string) => callback(path)
+    ipcRenderer.on('file-changed', handler)
+    return () => ipcRenderer.removeListener('file-changed', handler)
   },
-});
+})
 ```
 
 ```typescript
 // src/preload/index.d.ts
 export interface ElectronAPI {
-  saveFile: (content: string) => Promise<{ success: boolean; data?: string; error?: string }>;
-  openFile: () => Promise<{ success: boolean; data?: { path: string; content: string }; error?: string }>;
-  onFileChanged: (callback: (path: string) => void) => () => void;
+  saveFile: (content: string) => Promise<{ success: boolean; data?: string; error?: string }>
+  openFile: () => Promise<{
+    success: boolean
+    data?: { path: string; content: string }
+    error?: string
+  }>
+  onFileChanged: (callback: (path: string) => void) => () => void
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI: ElectronAPI
   }
 }
 ```
@@ -212,16 +216,16 @@ single source of truth for IPC channel definitions.
 ```typescript
 // src/shared/ipc-types.ts
 export type IpcChannelMap = {
-  'save-file': { args: [content: string]; return: IpcResult<string> };
-  'open-file': { args: []; return: IpcResult<{ path: string; content: string }> };
-};
+  'save-file': { args: [content: string]; return: IpcResult<string> }
+  'open-file': { args: []; return: IpcResult<{ path: string; content: string }> }
+}
 
-export type IpcResult<T> = { success: true; data: T } | { success: false; error: string };
+export type IpcResult<T> = { success: true; data: T } | { success: false; error: string }
 
 // Event channels (main -> renderer)
 export type IpcEventMap = {
-  'file-changed': [path: string];
-};
+  'file-changed': [path: string]
+}
 ```
 
 ## Configuration Files
@@ -234,9 +238,9 @@ process with independent plugins, aliases, and build targets.
 
 ```typescript
 // electron.vite.config.ts
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   main: {
@@ -264,7 +268,7 @@ export default defineConfig({
       },
     },
   },
-});
+})
 ```
 
 The `externalizeDepsPlugin()` is critical for main and preload -- it prevents
@@ -285,9 +289,9 @@ Use three TypeScript configs to enforce process boundaries at the type level.
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"]
-    }
-  }
+      "@shared/*": ["./src/shared/*"],
+    },
+  },
 }
 ```
 
@@ -299,9 +303,9 @@ Use three TypeScript configs to enforce process boundaries at the type level.
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ESNext",
-    "types": ["node"]
+    "types": ["node"],
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"],
 }
 ```
 
@@ -315,9 +319,9 @@ Use three TypeScript configs to enforce process boundaries at the type level.
     "target": "ESNext",
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/index.d.ts"]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/index.d.ts"],
 }
 ```
 
@@ -342,8 +346,8 @@ knows the shape of `window.electronAPI` at compile time.
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish"
-  }
+    "publish": "electron-forge publish",
+  },
 }
 ```
 

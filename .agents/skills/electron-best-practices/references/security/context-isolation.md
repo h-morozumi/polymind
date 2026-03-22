@@ -23,22 +23,22 @@ weakens the security boundary:
 
 ```typescript
 // main.ts - Secure BrowserWindow configuration
-import { BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron'
 
 const win = new BrowserWindow({
   webPreferences: {
-    contextIsolation: true,   // Separate JS worlds (mandatory since Electron 20)
-    sandbox: true,            // Restrict preload to limited polyfill environment
-    nodeIntegration: false,   // Prevent renderer from accessing Node.js directly
+    contextIsolation: true, // Separate JS worlds (mandatory since Electron 20)
+    sandbox: true, // Restrict preload to limited polyfill environment
+    nodeIntegration: false, // Prevent renderer from accessing Node.js directly
     preload: path.join(__dirname, 'preload.js'),
   },
-});
+})
 ```
 
 ### What Each Pillar Does
 
 | Setting            | Purpose                                                      |
-|--------------------|--------------------------------------------------------------|
+| ------------------ | ------------------------------------------------------------ |
 | `contextIsolation` | Creates separate JS worlds for preload and renderer content  |
 | `sandbox`          | Runs preload in Chromium sandbox with limited Node polyfills |
 | `nodeIntegration`  | When false, blocks `require()` and `process` in renderer     |
@@ -58,6 +58,7 @@ preload script to the renderer. It creates a frozen, structured-clone copy of
 the exposed object in the renderer's JavaScript world.
 
 Key behaviors:
+
 - Functions are wrapped as proxies; they cannot be inspected or modified.
 - Primitive values are copied by value.
 - Objects and arrays are deep-cloned using the structured clone algorithm.
@@ -66,12 +67,12 @@ Key behaviors:
 
 ```typescript
 // preload.ts - Basic API exposure
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('get-app-version'),
   openFile: () => ipcRenderer.invoke('dialog-open-file'),
-});
+})
 ```
 
 The renderer can then call `window.electronAPI.getVersion()` without any
@@ -85,7 +86,7 @@ listeners.
 
 ```typescript
 // preload.ts - SECURE: Full typed preload with cleanup
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Invoke (request/response) ---
@@ -100,17 +101,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // --- On (main-to-renderer, with cleanup) ---
   onUpdateCounter: (callback: (value: number) => void) => {
-    const handler = (_event: IpcRendererEvent, value: number) => callback(value);
-    ipcRenderer.on('update-counter', handler);
-    return () => ipcRenderer.removeListener('update-counter', handler);
+    const handler = (_event: IpcRendererEvent, value: number) => callback(value)
+    ipcRenderer.on('update-counter', handler)
+    return () => ipcRenderer.removeListener('update-counter', handler)
   },
 
   onFileChanged: (callback: (filePath: string) => void) => {
-    const handler = (_event: IpcRendererEvent, filePath: string) => callback(filePath);
-    ipcRenderer.on('file-changed', handler);
-    return () => ipcRenderer.removeListener('file-changed', handler);
+    const handler = (_event: IpcRendererEvent, filePath: string) => callback(filePath)
+    ipcRenderer.on('file-changed', handler)
+    return () => ipcRenderer.removeListener('file-changed', handler)
   },
-});
+})
 ```
 
 ### Why Return Unsubscribe Functions
@@ -153,41 +154,41 @@ projects reference:
 ```typescript
 // preload.d.ts - Type declarations for the exposed API
 interface DialogOpenOptions {
-  filters?: Array<{ name: string; extensions: string[] }>;
+  filters?: Array<{ name: string; extensions: string[] }>
 }
 
 interface DialogOpenResult {
-  canceled: boolean;
-  filePaths: string[];
+  canceled: boolean
+  filePaths: string[]
 }
 
 interface UserPreferences {
-  theme: 'light' | 'dark';
-  fontSize: number;
-  recentFiles: string[];
+  theme: 'light' | 'dark'
+  fontSize: number
+  recentFiles: string[]
 }
 
 interface ElectronAPI {
   // Invoke channels
-  loadPreferences: () => Promise<UserPreferences>;
-  saveFile: (content: string) => Promise<{ success: boolean; path: string }>;
-  showOpenDialog: (options: DialogOpenOptions) => Promise<DialogOpenResult>;
+  loadPreferences: () => Promise<UserPreferences>
+  saveFile: (content: string) => Promise<{ success: boolean; path: string }>
+  showOpenDialog: (options: DialogOpenOptions) => Promise<DialogOpenResult>
 
   // Send channels (fire-and-forget)
-  logAnalyticsEvent: (eventName: string, payload: Record<string, unknown>) => void;
+  logAnalyticsEvent: (eventName: string, payload: Record<string, unknown>) => void
 
   // Listener channels (return unsubscribe function)
-  onUpdateCounter: (callback: (value: number) => void) => () => void;
-  onFileChanged: (callback: (filePath: string) => void) => () => void;
+  onUpdateCounter: (callback: (value: number) => void) => () => void
+  onFileChanged: (callback: (filePath: string) => void) => () => void
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI: ElectronAPI
   }
 }
 
-export {};
+export {}
 ```
 
 Place this file where both your preload and renderer TypeScript configs can
@@ -202,14 +203,14 @@ validation, see [Typed IPC Patterns](../ipc/typed-ipc.md).
 When `sandbox: true` is set, the preload script runs in a restricted
 environment with only polyfilled versions of certain Node.js modules:
 
-| Available in Sandbox         | NOT Available in Sandbox     |
-|------------------------------|------------------------------|
-| `require` (limited subset)   | `child_process`              |
-| `Buffer`                     | `fs`                         |
-| `process` (limited)          | `path` (full)                |
-| `setTimeout` / `setInterval` | `os`                         |
-| `crypto` (limited)           | `net`, `http`, `https`       |
-| `events` (EventEmitter)      | Native Node addons           |
+| Available in Sandbox         | NOT Available in Sandbox |
+| ---------------------------- | ------------------------ |
+| `require` (limited subset)   | `child_process`          |
+| `Buffer`                     | `fs`                     |
+| `process` (limited)          | `path` (full)            |
+| `setTimeout` / `setInterval` | `os`                     |
+| `crypto` (limited)           | `net`, `http`, `https`   |
+| `events` (EventEmitter)      | Native Node addons       |
 
 This means the preload script cannot read files, spawn processes, or make
 network requests directly. All such operations must go through IPC to the
@@ -217,11 +218,11 @@ main process, where they can be validated and authorized.
 
 ```typescript
 // This FAILS in sandbox mode:
-import fs from 'fs';
-const data = fs.readFileSync('/etc/passwd'); // Error: fs is not available
+import fs from 'fs'
+const data = fs.readFileSync('/etc/passwd') // Error: fs is not available
 
 // Instead, request it through IPC:
-const data = await ipcRenderer.invoke('read-file', '/path/to/allowed/file');
+const data = await ipcRenderer.invoke('read-file', '/path/to/allowed/file')
 // The main process handler validates the path before reading.
 ```
 
@@ -232,8 +233,8 @@ const data = await ipcRenderer.invoke('read-file', '/path/to/allowed/file');
 ```typescript
 // INSECURE - NEVER DO THIS
 contextBridge.exposeInMainWorld('electron', {
-  ipcRenderer: ipcRenderer  // Exposes ALL IPC channels!
-});
+  ipcRenderer: ipcRenderer, // Exposes ALL IPC channels!
+})
 ```
 
 This gives the renderer full access to every IPC channel in your application.
@@ -245,9 +246,8 @@ that read files, execute commands, or modify system state.
 ```typescript
 // INSECURE - Still dangerous
 contextBridge.exposeInMainWorld('electron', {
-  invoke: (channel: string, ...args: unknown[]) =>
-    ipcRenderer.invoke(channel, ...args),
-});
+  invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args),
+})
 ```
 
 Even though this wraps `invoke`, it accepts any channel name. The renderer can
@@ -260,10 +260,10 @@ expose named functions for specific channels.
 // INSECURE - Never use in production
 new BrowserWindow({
   webPreferences: {
-    nodeIntegration: true,     // Gives renderer full Node.js access
-    contextIsolation: false,   // Removes the security boundary
+    nodeIntegration: true, // Gives renderer full Node.js access
+    contextIsolation: false, // Removes the security boundary
   },
-});
+})
 ```
 
 This disables all security boundaries. While it simplifies development, it
@@ -276,10 +276,10 @@ injected scripts) has full system access.
 // LEAKY - No way to unsubscribe
 contextBridge.exposeInMainWorld('electronAPI', {
   onProgress: (callback: (pct: number) => void) => {
-    ipcRenderer.on('download-progress', (_e, pct) => callback(pct));
+    ipcRenderer.on('download-progress', (_e, pct) => callback(pct))
     // No return value = no way to clean up
   },
-});
+})
 ```
 
 Always return a function that removes the listener, as shown in the secure
@@ -292,12 +292,12 @@ globals in the renderer console:
 
 ```javascript
 // In the renderer's DevTools console:
-console.log(typeof require);   // Should be "undefined"
-console.log(typeof process);   // Should be "undefined"
-console.log(typeof Buffer);    // Should be "undefined"
+console.log(typeof require) // Should be "undefined"
+console.log(typeof process) // Should be "undefined"
+console.log(typeof Buffer) // Should be "undefined"
 
 // The exposed API should be present:
-console.log(typeof window.electronAPI); // Should be "object"
+console.log(typeof window.electronAPI) // Should be "object"
 ```
 
 If `require` or `process` are accessible in the renderer, context isolation

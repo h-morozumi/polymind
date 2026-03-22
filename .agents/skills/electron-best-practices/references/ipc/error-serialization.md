@@ -17,29 +17,29 @@ This reference covers patterns for reliable, typed error handling across IPC.
 ```typescript
 // main process
 class FileNotFoundError extends Error {
-  code = 'FILE_NOT_FOUND';
-  filePath: string;
+  code = 'FILE_NOT_FOUND'
+  filePath: string
   constructor(filePath: string) {
-    super(`File not found: ${filePath}`);
-    this.filePath = filePath;
+    super(`File not found: ${filePath}`)
+    this.filePath = filePath
   }
 }
 
 ipcMain.handle('read-file', async (_event, path: string) => {
-  throw new FileNotFoundError(path);
-});
+  throw new FileNotFoundError(path)
+})
 ```
 
 ```typescript
 // renderer process
 try {
-  await window.electronAPI.readFile('/missing.txt');
+  await window.electronAPI.readFile('/missing.txt')
 } catch (error) {
-  console.log(error instanceof FileNotFoundError); // false
-  console.log(error.message);   // "File not found: /missing.txt"
-  console.log(error.code);      // undefined -- LOST
-  console.log(error.filePath);  // undefined -- LOST
-  console.log(error.stack);     // points to renderer, not main -- MISLEADING
+  console.log(error instanceof FileNotFoundError) // false
+  console.log(error.message) // "File not found: /missing.txt"
+  console.log(error.code) // undefined -- LOST
+  console.log(error.filePath) // undefined -- LOST
+  console.log(error.stack) // points to renderer, not main -- MISLEADING
 }
 ```
 
@@ -55,26 +55,20 @@ Instead of throwing errors across IPC, return a discriminated union:
 ```typescript
 // shared/result.ts
 
-export type Result<T> =
-  | { success: true; data: T }
-  | { success: false; error: SerializedError };
+export type Result<T> = { success: true; data: T } | { success: false; error: SerializedError }
 
 export interface SerializedError {
-  message: string;
-  code: string;
-  details?: unknown;
+  message: string
+  code: string
+  details?: unknown
 }
 
 export function ok<T>(data: T): Result<T> {
-  return { success: true, data };
+  return { success: true, data }
 }
 
-export function err<T = never>(
-  message: string,
-  code: string,
-  details?: unknown
-): Result<T> {
-  return { success: false, error: { message, code, details } };
+export function err<T = never>(message: string, code: string, details?: unknown): Result<T> {
+  return { success: false, error: { message, code, details } }
 }
 ```
 
@@ -100,9 +94,9 @@ export const ErrorCode = {
   NETWORK_ERROR: 'NETWORK_ERROR',
   TIMEOUT: 'TIMEOUT',
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
-} as const;
+} as const
 
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
 ```
 
 ---
@@ -113,44 +107,44 @@ Catch errors in handlers and convert them to Result values automatically:
 
 ```typescript
 // main/ipc-handler.ts
-import { ipcMain } from 'electron';
-import { ok, err, type Result } from '../shared/result';
-import { ErrorCode } from '../shared/error-codes';
+import { ipcMain } from 'electron'
+import { ok, err, type Result } from '../shared/result'
+import { ErrorCode } from '../shared/error-codes'
 
 export function handleWithResult<TArgs extends unknown[], TData>(
   channel: string,
-  handler: (...args: TArgs) => Promise<TData> | TData
+  handler: (...args: TArgs) => Promise<TData> | TData,
 ): void {
   ipcMain.handle(channel, async (_event, ...args): Promise<Result<TData>> => {
     try {
-      const data = await handler(...(args as TArgs));
-      return ok(data);
+      const data = await handler(...(args as TArgs))
+      return ok(data)
     } catch (e) {
-      return classifyError(e);
+      return classifyError(e)
     }
-  });
+  })
 }
 
 function classifyError<T>(e: unknown): Result<T> {
   if (e instanceof Error && 'code' in e) {
-    const nodeErr = e as NodeJS.ErrnoException;
+    const nodeErr = e as NodeJS.ErrnoException
     switch (nodeErr.code) {
       case 'ENOENT':
-        return err(e.message, ErrorCode.FILE_NOT_FOUND, { path: nodeErr.path });
+        return err(e.message, ErrorCode.FILE_NOT_FOUND, { path: nodeErr.path })
       case 'EACCES':
       case 'EPERM':
-        return err(e.message, ErrorCode.PERMISSION_DENIED, { path: nodeErr.path });
+        return err(e.message, ErrorCode.PERMISSION_DENIED, { path: nodeErr.path })
       case 'ENOSPC':
-        return err(e.message, ErrorCode.DISK_FULL);
+        return err(e.message, ErrorCode.DISK_FULL)
       case 'ETIMEDOUT':
-        return err(e.message, ErrorCode.TIMEOUT);
+        return err(e.message, ErrorCode.TIMEOUT)
     }
   }
 
   if (e instanceof Error) {
-    return err(e.message, ErrorCode.UNKNOWN_ERROR);
+    return err(e.message, ErrorCode.UNKNOWN_ERROR)
   }
-  return err(String(e), ErrorCode.UNKNOWN_ERROR);
+  return err(String(e), ErrorCode.UNKNOWN_ERROR)
 }
 ```
 
@@ -158,23 +152,24 @@ Usage:
 
 ```typescript
 // main/handlers/file-handlers.ts
-import { handleWithResult } from '../ipc-handler';
-import * as fs from 'node:fs/promises';
+import { handleWithResult } from '../ipc-handler'
+import * as fs from 'node:fs/promises'
 
 handleWithResult('save-file', async (content: string, filePath: string) => {
-  await fs.writeFile(filePath, content, 'utf-8');
-  return filePath;
-});
+  await fs.writeFile(filePath, content, 'utf-8')
+  return filePath
+})
 
 handleWithResult('read-file', async (filePath: string) => {
-  const stat = await fs.stat(filePath);
+  const stat = await fs.stat(filePath)
   if (stat.size > 50 * 1024 * 1024) {
     throw Object.assign(new Error('File exceeds 50MB limit'), {
-      code: 'FILE_TOO_LARGE', size: stat.size,
-    });
+      code: 'FILE_TOO_LARGE',
+      size: stat.size,
+    })
   }
-  return fs.readFile(filePath, 'utf-8');
-});
+  return fs.readFile(filePath, 'utf-8')
+})
 ```
 
 ---
@@ -185,59 +180,59 @@ Unwrap Result values and handle specific error codes:
 
 ```typescript
 // renderer/lib/errors.ts
-import type { SerializedError } from '../../shared/result';
+import type { SerializedError } from '../../shared/result'
 
 export class AppError extends Error {
-  code: string;
-  details?: unknown;
+  code: string
+  details?: unknown
 
   constructor(serialized: SerializedError) {
-    super(serialized.message);
-    this.name = 'AppError';
-    this.code = serialized.code;
-    this.details = serialized.details;
+    super(serialized.message)
+    this.name = 'AppError'
+    this.code = serialized.code
+    this.details = serialized.details
   }
 
   is(code: string): boolean {
-    return this.code === code;
+    return this.code === code
   }
 }
 ```
 
 ```typescript
 // renderer/lib/ipc-client.ts
-import type { Result } from '../../shared/result';
-import { AppError } from './errors';
+import type { Result } from '../../shared/result'
+import { AppError } from './errors'
 
 export function unwrapResult<T>(result: Result<T>): T {
-  if (result.success) return result.data;
-  throw new AppError(result.error);
+  if (result.success) return result.data
+  throw new AppError(result.error)
 }
 ```
 
 ```typescript
 // renderer/services/file-service.ts
-import { unwrapResult } from '../lib/ipc-client';
-import { AppError } from '../lib/errors';
-import { ErrorCode } from '../../shared/error-codes';
+import { unwrapResult } from '../lib/ipc-client'
+import { AppError } from '../lib/errors'
+import { ErrorCode } from '../../shared/error-codes'
 
 async function handleSave(content: string) {
   try {
-    const result = await window.electronAPI.saveFile(content);
-    const path = unwrapResult(result);
-    showNotification(`Saved to ${path}`);
+    const result = await window.electronAPI.saveFile(content)
+    const path = unwrapResult(result)
+    showNotification(`Saved to ${path}`)
   } catch (e) {
     if (e instanceof AppError) {
       if (e.is(ErrorCode.PERMISSION_DENIED)) {
-        showDialog('Cannot save: permission denied. Try a different location.');
-        return;
+        showDialog('Cannot save: permission denied. Try a different location.')
+        return
       }
       if (e.is(ErrorCode.DISK_FULL)) {
-        showDialog('Cannot save: disk is full.');
-        return;
+        showDialog('Cannot save: disk is full.')
+        return
       }
     }
-    showDialog(`Save failed: ${(e as Error).message}`);
+    showDialog(`Save failed: ${(e as Error).message}`)
   }
 }
 ```
@@ -251,13 +246,13 @@ The Result pattern composes with the typed IPC approach from
 
 ```typescript
 // shared/ipc-types.ts
-import type { Result } from './result';
+import type { Result } from './result'
 
 export type IpcChannelMap = {
-  'save-file': { args: [content: string, filePath: string]; return: Result<string> };
-  'read-file': { args: [filePath: string]; return: Result<string> };
-  'get-user': { args: [id: string]; return: Result<User | null> };
-};
+  'save-file': { args: [content: string, filePath: string]; return: Result<string> }
+  'read-file': { args: [filePath: string]; return: Result<string> }
+  'get-user': { args: [id: string]; return: Result<User | null> }
+}
 ```
 
 Every channel explicitly communicates that it can fail, and the renderer is
@@ -275,7 +270,7 @@ throw new TRPCError({
   code: 'FORBIDDEN',
   message: 'Permission denied',
   cause: originalError,
-});
+})
 ```
 
 For richer metadata than tRPC codes allow, embed structured data in the message:
@@ -288,7 +283,7 @@ throw new TRPCError({
     message: 'File exceeds 50MB limit',
     details: { size: stat.size, limit: 50 * 1024 * 1024 },
   }),
-});
+})
 ```
 
 ---

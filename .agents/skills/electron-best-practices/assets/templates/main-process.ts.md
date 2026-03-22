@@ -16,79 +16,79 @@ This template provides a secure Electron main process entry point with sensible 
  * TODO: Add app menu if needed
  */
 
-import { app, BrowserWindow, shell } from 'electron';
-import { join } from 'path';
-import { registerFileHandlers } from './ipc/file-handlers';
+import { app, BrowserWindow, shell } from 'electron'
+import { join } from 'path'
+import { registerFileHandlers } from './ipc/file-handlers'
 // TODO: Import additional IPC handler modules
 
-let mainWindow: BrowserWindow | null = null;
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1200,                    // TODO: Set desired width
-    height: 800,                    // TODO: Set desired height
+    width: 1200, // TODO: Set desired width
+    height: 800, // TODO: Set desired height
     minWidth: 600,
     minHeight: 400,
-    title: 'My Electron App',      // TODO: Set app title
-    icon: join(__dirname, '../../resources/icon.png'),  // TODO: Set icon path
-    show: false,                    // Show when ready to prevent flash
+    title: 'My Electron App', // TODO: Set app title
+    icon: join(__dirname, '../../resources/icon.png'), // TODO: Set icon path
+    show: false, // Show when ready to prevent flash
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,       // SECURITY: Never disable
-      sandbox: true,                // SECURITY: Never disable
-      nodeIntegration: false,       // SECURITY: Never enable
-      webviewTag: false,            // SECURITY: Disable unless needed
+      contextIsolation: true, // SECURITY: Never disable
+      sandbox: true, // SECURITY: Never disable
+      nodeIntegration: false, // SECURITY: Never enable
+      webviewTag: false, // SECURITY: Disable unless needed
     },
-  });
+  })
 
   // Show window when ready
   mainWindow.on('ready-to-show', () => {
-    mainWindow?.show();
-  });
+    mainWindow?.show()
+  })
 
   // Prevent navigation to external URLs
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) {
-      shell.openExternal(url);
+      shell.openExternal(url)
     }
-    return { action: 'deny' };
-  });
+    return { action: 'deny' }
+  })
 
   // Load renderer
   if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
   mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+    mainWindow = null
+  })
 }
 
 // Register IPC handlers
 function registerHandlers(): void {
-  registerFileHandlers();
+  registerFileHandlers()
   // TODO: Register additional handlers
 }
 
 // App lifecycle
 app.whenReady().then(() => {
-  registerHandlers();
-  createWindow();
+  registerHandlers()
+  createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow()
     }
-  });
-});
+  })
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    app.quit()
   }
-});
+})
 ```
 
 ## Customization Notes

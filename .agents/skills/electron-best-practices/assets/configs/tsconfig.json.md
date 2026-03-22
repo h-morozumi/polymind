@@ -16,10 +16,7 @@ The root `tsconfig.json` defines shared compiler options and wires together the 
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.web.json" }
-  ]
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
 }
 ```
 
@@ -42,12 +39,7 @@ The `tsconfig.node.json` covers the main process, preload scripts, and shared ut
       "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": [
-    "src/main/**/*",
-    "src/preload/**/*",
-    "src/shared/**/*",
-    "electron.vite.config.ts"
-  ]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "electron.vite.config.ts"]
 }
 ```
 
@@ -72,11 +64,7 @@ The `tsconfig.web.json` covers the renderer process. It includes DOM type defini
       "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": [
-    "src/renderer/**/*",
-    "src/shared/**/*",
-    "src/preload/index.d.ts"
-  ]
+  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/index.d.ts"]
 }
 ```
 
@@ -113,13 +101,13 @@ The web config includes `src/preload/index.d.ts` in its `include` array. This fi
 ```typescript
 // src/preload/index.d.ts
 export interface ElectronAPI {
-  sendMessage: (channel: string, data: unknown) => void;
-  onMessage: (channel: string, callback: (data: unknown) => void) => void;
+  sendMessage: (channel: string, data: unknown) => void
+  onMessage: (channel: string, callback: (data: unknown) => void) => void
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI: ElectronAPI
   }
 }
 ```

@@ -15,6 +15,7 @@ publishers.
 Both tools are widely used, but they serve different philosophies:
 
 **Electron Forge advantages:**
+
 - First-party support from the Electron team
 - ASAR integrity verification (prevents tampering with app bundles)
 - Native support for Electron Fuses (security toggles baked into the binary)
@@ -23,6 +24,7 @@ Both tools are widely used, but they serve different philosophies:
 - Plugin architecture for extensibility
 
 **electron-builder advantages:**
+
 - Higher community adoption (more Stack Overflow answers, tutorials)
 - More configuration options out of the box
 - Built-in auto-update server support
@@ -68,8 +70,8 @@ preferred because it allows environment variable access and conditional logic.
 
 ```javascript
 // forge.config.js - Complete production configuration
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const { FusesPlugin } = require('@electron-forge/plugin-fuses')
+const { FuseV1Options, FuseVersion } = require('@electron/fuses')
 
 module.exports = {
   packagerConfig: {
@@ -132,7 +134,7 @@ module.exports = {
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
     }),
   ],
-};
+}
 ```
 
 ---
@@ -256,8 +258,8 @@ application into a single archive; when combined with the `OnlyLoadAppFromAsar`
 fuse, Electron refuses to load from loose files, preventing code tampering.
 
 ```javascript
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const { FusesPlugin } = require('@electron-forge/plugin-fuses')
+const { FuseV1Options, FuseVersion } = require('@electron/fuses')
 
 // Fuses plugin with ASAR integrity
 new FusesPlugin({
@@ -283,16 +285,18 @@ custom logic at each stage of the packaging pipeline.
 ```javascript
 module.exports = {
   hooks: {
-    generateAssets: async () => { /* pre-packaging: build, generate icons */ },
+    generateAssets: async () => {
+      /* pre-packaging: build, generate icons */
+    },
     postPackage: async (config, result) => {
-      console.log(`Packaged for ${result.platform}/${result.arch}`);
+      console.log(`Packaged for ${result.platform}/${result.arch}`)
     },
     postMake: async (config, results) => {
       // Custom post-processing, additional signing, etc.
-      return results;
+      return results
     },
   },
-};
+}
 ```
 
 Universal binaries contain both arm64 (Apple Silicon) and x64 (Intel) code in a
@@ -302,10 +306,14 @@ single binary, providing native performance on all Mac hardware.
 module.exports = {
   packagerConfig: {
     osxUniversal: { x64ArchFiles: '*.node' },
-    osxSign: { /* signing config */ },
-    osxNotarize: { /* notarize config */ },
+    osxSign: {
+      /* signing config */
+    },
+    osxNotarize: {
+      /* notarize config */
+    },
   },
-};
+}
 ```
 
 ```bash

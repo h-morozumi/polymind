@@ -16,30 +16,30 @@ This template provides a React 18 renderer entry point for Electron applications
  * TODO: Add state management provider if needed
  */
 
-import React, { Component, Suspense } from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
+import React, { Component, Suspense } from 'react'
+import ReactDOM from 'react-dom/client'
+import './index.css'
 
 // === Error Boundary ===
 interface ErrorBoundaryProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
+  state: ErrorBoundaryState = { hasError: false, error: null }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     // Report error to main process
-    console.error('React Error:', error, info.componentStack);
+    console.error('React Error:', error, info.componentStack)
     // TODO: Send to main process for logging
     // window.electronAPI.reportError({ message: error.message, stack: error.stack });
   }
@@ -50,13 +50,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         <div style={{ padding: 20, textAlign: 'center' }}>
           <h2>Something went wrong</h2>
           <p>{this.state.error?.message}</p>
-          <button onClick={() => this.setState({ hasError: false, error: null })}>
-            Try Again
-          </button>
+          <button onClick={() => this.setState({ hasError: false, error: null })}>Try Again</button>
         </div>
-      );
+      )
     }
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -68,11 +66,11 @@ function App(): React.ReactElement {
       <h1>My Electron App</h1>
       {/* TODO: Add your components and routes */}
     </div>
-  );
+  )
 }
 
 // === Mount ===
-const root = ReactDOM.createRoot(document.getElementById('root')!);
+const root = ReactDOM.createRoot(document.getElementById('root')!)
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
@@ -80,8 +78,8 @@ root.render(
         <App />
       </Suspense>
     </ErrorBoundary>
-  </React.StrictMode>
-);
+  </React.StrictMode>,
+)
 ```
 
 ## Customization Notes

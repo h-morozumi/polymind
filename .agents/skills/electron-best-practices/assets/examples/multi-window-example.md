@@ -10,10 +10,10 @@ Complete example of multi-window state synchronization using `electron-store` fo
 // src/shared/state-types.ts
 
 export interface AppState {
-  theme: 'light' | 'dark';
-  sidebarOpen: boolean;
-  activeDocument: string | null;
-  recentFiles: string[];
+  theme: 'light' | 'dark'
+  sidebarOpen: boolean
+  activeDocument: string | null
+  recentFiles: string[]
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -21,10 +21,10 @@ export const DEFAULT_STATE: AppState = {
   sidebarOpen: true,
   activeDocument: null,
   recentFiles: [],
-};
+}
 
 // Keys that should trigger UI updates across all windows
-export type SyncableKey = keyof AppState;
+export type SyncableKey = keyof AppState
 ```
 
 ---
@@ -36,50 +36,46 @@ The main process holds the authoritative state using `electron-store` for disk p
 ```typescript
 // src/main/store.ts
 
-import Store from 'electron-store';
-import { BrowserWindow, ipcMain } from 'electron';
-import type { AppState } from '../shared/state-types';
-import { DEFAULT_STATE } from '../shared/state-types';
+import Store from 'electron-store'
+import { BrowserWindow, ipcMain } from 'electron'
+import type { AppState } from '../shared/state-types'
+import { DEFAULT_STATE } from '../shared/state-types'
 
-const store = new Store<AppState>({ defaults: DEFAULT_STATE });
+const store = new Store<AppState>({ defaults: DEFAULT_STATE })
 
 // Broadcast state changes to all windows
 function broadcast<K extends keyof AppState>(
   key: K,
   value: AppState[K],
-  senderWebContentsId?: number
+  senderWebContentsId?: number,
 ): void {
-  BrowserWindow.getAllWindows().forEach(win => {
+  BrowserWindow.getAllWindows().forEach((win) => {
     if (!win.isDestroyed()) {
       // Optionally skip the sender to avoid echo
       if (senderWebContentsId && win.webContents.id === senderWebContentsId) {
-        return;
+        return
       }
-      win.webContents.send('state:changed', { key, value });
+      win.webContents.send('state:changed', { key, value })
     }
-  });
+  })
 }
 
 export function registerStateHandlers(): void {
   // Get full state (used for initial hydration)
   ipcMain.handle('state:get-all', () => {
-    return store.store;
-  });
+    return store.store
+  })
 
   // Get single value
   ipcMain.handle('state:get', (_event, key: keyof AppState) => {
-    return store.get(key);
-  });
+    return store.get(key)
+  })
 
   // Set single value and broadcast to other windows
-  ipcMain.handle(
-    'state:set',
-    (_event, key: keyof AppState, value: unknown) => {
-      store.set(key, value as AppState[typeof key]);
-      broadcast(key, value as AppState[typeof key], _event.sender.id);
-    }
-  );
-
+  ipcMain.handle('state:set', (_event, key: keyof AppState, value: unknown) => {
+    store.set(key, value as AppState[typeof key])
+    broadcast(key, value as AppState[typeof key], _event.sender.id)
+  })
 }
 ```
 
@@ -90,29 +86,22 @@ export function registerStateHandlers(): void {
 ```typescript
 // src/preload/index.ts (state portion)
 
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('stateAPI', {
-  getAll: (): Promise<Record<string, unknown>> =>
-    ipcRenderer.invoke('state:get-all'),
+  getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('state:get-all'),
 
-  get: (key: string): Promise<unknown> =>
-    ipcRenderer.invoke('state:get', key),
+  get: (key: string): Promise<unknown> => ipcRenderer.invoke('state:get', key),
 
-  set: (key: string, value: unknown): Promise<void> =>
-    ipcRenderer.invoke('state:set', key, value),
+  set: (key: string, value: unknown): Promise<void> => ipcRenderer.invoke('state:set', key, value),
 
-  onChange: (
-    callback: (data: { key: string; value: unknown }) => void
-  ): (() => void) => {
-    const handler = (
-      _event: IpcRendererEvent,
-      data: { key: string; value: unknown }
-    ) => callback(data);
-    ipcRenderer.on('state:changed', handler);
-    return () => ipcRenderer.removeListener('state:changed', handler);
+  onChange: (callback: (data: { key: string; value: unknown }) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, data: { key: string; value: unknown }) =>
+      callback(data)
+    ipcRenderer.on('state:changed', handler)
+    return () => ipcRenderer.removeListener('state:changed', handler)
   },
-});
+})
 ```
 
 Add a corresponding `index.d.ts` that declares `window.stateAPI` with the same method signatures so the renderer has type information.
@@ -126,18 +115,18 @@ Each action updates the local store immediately for responsiveness, then sends t
 ```typescript
 // src/renderer/src/store/app-store.ts
 
-import { create } from 'zustand';
-import type { AppState } from '../../../shared/state-types';
+import { create } from 'zustand'
+import type { AppState } from '../../../shared/state-types'
 
 interface AppStore extends AppState {
   // Actions
-  setTheme: (theme: AppState['theme']) => void;
-  toggleSidebar: () => void;
-  setActiveDocument: (path: string | null) => void;
-  addRecentFile: (path: string) => void;
+  setTheme: (theme: AppState['theme']) => void
+  toggleSidebar: () => void
+  setActiveDocument: (path: string | null) => void
+  addRecentFile: (path: string) => void
 
   // Internal: used by sync hook to apply remote changes
-  _hydrate: (state: Partial<AppState>) => void;
+  _hydrate: (state: Partial<AppState>) => void
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -148,31 +137,31 @@ export const useAppStore = create<AppStore>((set, get) => ({
   recentFiles: [],
 
   setTheme: (theme) => {
-    set({ theme });
-    window.stateAPI.set('theme', theme);
+    set({ theme })
+    window.stateAPI.set('theme', theme)
   },
 
   toggleSidebar: () => {
-    const next = !get().sidebarOpen;
-    set({ sidebarOpen: next });
-    window.stateAPI.set('sidebarOpen', next);
+    const next = !get().sidebarOpen
+    set({ sidebarOpen: next })
+    window.stateAPI.set('sidebarOpen', next)
   },
 
   setActiveDocument: (path) => {
-    set({ activeDocument: path });
-    window.stateAPI.set('activeDocument', path);
+    set({ activeDocument: path })
+    window.stateAPI.set('activeDocument', path)
   },
 
   addRecentFile: (path) => {
-    const current = get().recentFiles;
+    const current = get().recentFiles
     // Move to front, deduplicate, cap at 10 entries
-    const files = [path, ...current.filter(f => f !== path)].slice(0, 10);
-    set({ recentFiles: files });
-    window.stateAPI.set('recentFiles', files);
+    const files = [path, ...current.filter((f) => f !== path)].slice(0, 10)
+    set({ recentFiles: files })
+    window.stateAPI.set('recentFiles', files)
   },
 
   _hydrate: (state) => set(state),
-}));
+}))
 ```
 
 ---
@@ -184,24 +173,24 @@ Hydrates the Zustand store from the main process on mount, and listens for chang
 ```typescript
 // src/renderer/src/hooks/useStateSync.ts
 
-import { useEffect } from 'react';
-import { useAppStore } from '../store/app-store';
+import { useEffect } from 'react'
+import { useAppStore } from '../store/app-store'
 
 export function useStateSync(): void {
   useEffect(() => {
     // 1. Hydrate from main process store on mount
     //    This ensures the window picks up persisted state
     window.stateAPI.getAll().then((state) => {
-      useAppStore.getState()._hydrate(state as Record<string, unknown>);
-    });
+      useAppStore.getState()._hydrate(state as Record<string, unknown>)
+    })
 
     // 2. Listen for changes broadcast from other windows
     const cleanup = window.stateAPI.onChange(({ key, value }) => {
-      useAppStore.getState()._hydrate({ [key]: value });
-    });
+      useAppStore.getState()._hydrate({ [key]: value })
+    })
 
-    return cleanup;
-  }, []);
+    return cleanup
+  }, [])
 }
 ```
 
@@ -212,20 +201,20 @@ export function useStateSync(): void {
 ```typescript
 // src/main/window-manager.ts
 
-import { BrowserWindow } from 'electron';
-import { join } from 'path';
+import { BrowserWindow } from 'electron'
+import { join } from 'path'
 
-const windows = new Map<string, BrowserWindow>();
+const windows = new Map<string, BrowserWindow>()
 
 export function createWindow(
   id: string,
-  options?: Partial<Electron.BrowserWindowConstructorOptions>
+  options?: Partial<Electron.BrowserWindowConstructorOptions>,
 ): BrowserWindow {
   // If a window with this ID already exists, focus it
   if (windows.has(id)) {
-    const existing = windows.get(id)!;
-    existing.focus();
-    return existing;
+    const existing = windows.get(id)!
+    existing.focus()
+    return existing
   }
 
   const win = new BrowserWindow({
@@ -239,47 +228,47 @@ export function createWindow(
       nodeIntegration: false,
       ...options?.webPreferences,
     },
-  });
+  })
 
-  windows.set(id, win);
-  win.on('closed', () => windows.delete(id));
+  windows.set(id, win)
+  win.on('closed', () => windows.delete(id))
 
   // Load renderer: dev server in development, file in production
   if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${id}`);
+    win.loadURL(`${process.env.ELECTRON_RENDERER_URL}#${id}`)
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'), { hash: id });
+    win.loadFile(join(__dirname, '../renderer/index.html'), { hash: id })
   }
 
-  return win;
+  return win
 }
 
 export function getWindow(id: string): BrowserWindow | undefined {
-  return windows.get(id);
+  return windows.get(id)
 }
 
 export function getAllWindowIds(): string[] {
-  return Array.from(windows.keys());
+  return Array.from(windows.keys())
 }
 ```
 
 ```typescript
 // src/main/index.ts (entry point)
 
-import { app } from 'electron';
-import { registerStateHandlers } from './store';
-import { createWindow } from './window-manager';
+import { app } from 'electron'
+import { registerStateHandlers } from './store'
+import { createWindow } from './window-manager'
 
 app.whenReady().then(() => {
-  registerStateHandlers();
-  createWindow('main');
-});
+  registerStateHandlers()
+  createWindow('main')
+})
 
 // Open a new window from IPC (e.g., for a secondary panel)
-import { ipcMain } from 'electron';
+import { ipcMain } from 'electron'
 ipcMain.handle('window:open', (_event, id: string) => {
-  createWindow(id);
-});
+  createWindow(id)
+})
 ```
 
 ---
@@ -289,35 +278,31 @@ ipcMain.handle('window:open', (_event, id: string) => {
 ```tsx
 // src/renderer/src/App.tsx
 
-import { useStateSync } from './hooks/useStateSync';
-import { useAppStore } from './store/app-store';
+import { useStateSync } from './hooks/useStateSync'
+import { useAppStore } from './store/app-store'
 
 export default function App() {
   // Initialize sync on mount
-  useStateSync();
+  useStateSync()
 
-  const theme = useAppStore(s => s.theme);
-  const setTheme = useAppStore(s => s.setTheme);
-  const sidebarOpen = useAppStore(s => s.sidebarOpen);
-  const toggleSidebar = useAppStore(s => s.toggleSidebar);
-  const recentFiles = useAppStore(s => s.recentFiles);
+  const theme = useAppStore((s) => s.theme)
+  const setTheme = useAppStore((s) => s.setTheme)
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
+  const recentFiles = useAppStore((s) => s.recentFiles)
 
   return (
     <div className={`app ${theme}`}>
       <header>
-        <button onClick={toggleSidebar}>
-          {sidebarOpen ? 'Hide' : 'Show'} Sidebar
-        </button>
-        <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-          Toggle Theme
-        </button>
+        <button onClick={toggleSidebar}>{sidebarOpen ? 'Hide' : 'Show'} Sidebar</button>
+        <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>Toggle Theme</button>
       </header>
 
       {sidebarOpen && (
         <aside>
           <h3>Recent Files</h3>
           <ul>
-            {recentFiles.map(file => (
+            {recentFiles.map((file) => (
               <li key={file}>{file}</li>
             ))}
           </ul>
@@ -330,7 +315,7 @@ export default function App() {
         <p>Open another window to see state sync in action.</p>
       </main>
     </div>
-  );
+  )
 }
 ```
 

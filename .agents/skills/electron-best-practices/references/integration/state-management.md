@@ -10,23 +10,23 @@ layers that must be coordinated.
 
 ## The Three State Layers
 
-| Layer | Location | Lifetime | Examples |
-|-------|----------|----------|----------|
-| Transient UI | Renderer (React/Zustand) | Window session | Sidebar open, scroll position |
-| Shared App | Main process (memory) | App session | Active connections, running tasks |
-| Persisted | Main process (electron-store) | Across restarts | Theme, window bounds, recent files |
+| Layer        | Location                      | Lifetime        | Examples                           |
+| ------------ | ----------------------------- | --------------- | ---------------------------------- |
+| Transient UI | Renderer (React/Zustand)      | Window session  | Sidebar open, scroll position      |
+| Shared App   | Main process (memory)         | App session     | Active connections, running tasks  |
+| Persisted    | Main process (electron-store) | Across restarts | Theme, window bounds, recent files |
 
 ## Decision Matrix
 
-| State Type | Where to Store | Why |
-|-----------|---------------|-----|
-| UI state (sidebar open) | Zustand (renderer) | Transient, single window |
-| Theme preference | Zustand + electron-store | Persists across sessions |
-| Recent files | Zustand + electron-store | Persists, may sync across windows |
-| Window position/size | electron-store (main) | Managed by main process |
-| Auth tokens | electron-store (main) | Security, never in renderer |
-| Document content | Zustand (renderer) | Large, frequently changing |
-| App settings | electron-store (main) | Shared across windows |
+| State Type              | Where to Store           | Why                               |
+| ----------------------- | ------------------------ | --------------------------------- |
+| UI state (sidebar open) | Zustand (renderer)       | Transient, single window          |
+| Theme preference        | Zustand + electron-store | Persists across sessions          |
+| Recent files            | Zustand + electron-store | Persists, may sync across windows |
+| Window position/size    | electron-store (main)    | Managed by main process           |
+| Auth tokens             | electron-store (main)    | Security, never in renderer       |
+| Document content        | Zustand (renderer)       | Large, frequently changing        |
+| App settings            | electron-store (main)    | Shared across windows             |
 
 Rule: if it survives a restart, use electron-store. If shared across windows,
 route through main. If local to one window's UI, use Zustand or React state.
@@ -40,15 +40,15 @@ and integrates easily with IPC for persistence.
 
 ```typescript
 // renderer/store.ts
-import { create } from 'zustand';
+import { create } from 'zustand'
 
 interface AppState {
-  theme: 'light' | 'dark';
-  recentFiles: string[];
-  sidebarOpen: boolean;
-  setTheme: (theme: 'light' | 'dark') => void;
-  addRecentFile: (path: string) => void;
-  toggleSidebar: () => void;
+  theme: 'light' | 'dark'
+  recentFiles: string[]
+  sidebarOpen: boolean
+  setTheme: (theme: 'light' | 'dark') => void
+  addRecentFile: (path: string) => void
+  toggleSidebar: () => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -57,18 +57,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarOpen: true,
 
   setTheme: (theme) => {
-    set({ theme });
-    window.electronAPI.setState('theme', theme); // Persist to main
+    set({ theme })
+    window.electronAPI.setState('theme', theme) // Persist to main
   },
 
   addRecentFile: (path) => {
-    const files = [path, ...get().recentFiles.filter(f => f !== path)].slice(0, 10);
-    set({ recentFiles: files });
-    window.electronAPI.setState('recentFiles', files);
+    const files = [path, ...get().recentFiles.filter((f) => f !== path)].slice(0, 10)
+    set({ recentFiles: files })
+    window.electronAPI.setState('recentFiles', files)
   },
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-}));
+}))
 ```
 
 Note that `toggleSidebar` does not call IPC -- it is transient UI state. Only
@@ -83,12 +83,12 @@ user's app data directory with atomic writes and schema validation.
 
 ```typescript
 // main/store.ts
-import Store from 'electron-store';
+import Store from 'electron-store'
 
 interface PersistedState {
-  theme: 'light' | 'dark';
-  recentFiles: string[];
-  windowBounds: { x: number; y: number; width: number; height: number };
+  theme: 'light' | 'dark'
+  recentFiles: string[]
+  windowBounds: { x: number; y: number; width: number; height: number }
 }
 
 const store = new Store<PersistedState>({
@@ -97,9 +97,9 @@ const store = new Store<PersistedState>({
     recentFiles: [],
     windowBounds: { x: 0, y: 0, width: 1200, height: 800 },
   },
-});
+})
 
-export default store;
+export default store
 ```
 
 ---
@@ -111,28 +111,27 @@ typed IPC handlers, respecting context isolation.
 
 ```typescript
 // main/ipc/state-handlers.ts
-import { ipcMain } from 'electron';
-import store from '../store';
+import { ipcMain } from 'electron'
+import store from '../store'
 
 ipcMain.handle('get-persisted-state', () => ({
   theme: store.get('theme'),
   recentFiles: store.get('recentFiles'),
-}));
+}))
 
 ipcMain.handle('set-state', (_event, key: string, value: unknown) => {
-  const allowed = ['theme', 'recentFiles'];
-  if (!allowed.includes(key)) throw new Error(`Key "${key}" not allowed`);
-  store.set(key as any, value);
-});
+  const allowed = ['theme', 'recentFiles']
+  if (!allowed.includes(key)) throw new Error(`Key "${key}" not allowed`)
+  store.set(key as any, value)
+})
 ```
 
 ```typescript
 // preload/index.ts
 contextBridge.exposeInMainWorld('electronAPI', {
   getPersistedState: () => ipcRenderer.invoke('get-persisted-state'),
-  setState: (key: string, value: unknown) =>
-    ipcRenderer.invoke('set-state', key, value),
-});
+  setState: (key: string, value: unknown) => ipcRenderer.invoke('set-state', key, value),
+})
 ```
 
 ---
@@ -143,14 +142,14 @@ Hydrate the Zustand store from persisted state before rendering content.
 
 ```typescript
 // renderer/initStore.ts
-import { useAppStore } from './store';
+import { useAppStore } from './store'
 
 export async function initializeStore() {
-  const persisted = await window.electronAPI.getPersistedState();
+  const persisted = await window.electronAPI.getPersistedState()
   useAppStore.setState({
     theme: persisted.theme ?? 'light',
     recentFiles: persisted.recentFiles ?? [],
-  });
+  })
 }
 ```
 
@@ -176,36 +175,36 @@ broadcasts to all other windows.
 
 ```typescript
 // main/ipc/state-sync.ts
-import { BrowserWindow, ipcMain } from 'electron';
-import store from '../store';
+import { BrowserWindow, ipcMain } from 'electron'
+import store from '../store'
 
-const syncedKeys = new Set(['theme', 'recentFiles']);
+const syncedKeys = new Set(['theme', 'recentFiles'])
 
 ipcMain.handle('set-state', (event, key: string, value: unknown) => {
-  store.set(key as any, value);
+  store.set(key as any, value)
   if (syncedKeys.has(key)) {
-    const senderId = event.sender.id;
+    const senderId = event.sender.id
     for (const win of BrowserWindow.getAllWindows()) {
       if (win.webContents.id !== senderId) {
-        win.webContents.send('state-changed', key, value);
+        win.webContents.send('state-changed', key, value)
       }
     }
   }
-});
+})
 ```
 
 ```typescript
 // renderer/hooks/useStateSyncListener.ts
-import { useEffect } from 'react';
-import { useAppStore } from '../store';
+import { useEffect } from 'react'
+import { useAppStore } from '../store'
 
 export function useStateSyncListener() {
   useEffect(() => {
     const cleanup = window.electronAPI.onStateChanged((key, value) => {
-      useAppStore.setState({ [key]: value });
-    });
-    return cleanup;
-  }, []);
+      useAppStore.setState({ [key]: value })
+    })
+    return cleanup
+  }, [])
 }
 ```
 
@@ -219,25 +218,25 @@ For apps with many persisted keys, a middleware automates the sync:
 
 ```typescript
 // renderer/middleware/ipcPersist.ts
-import { StateCreator } from 'zustand';
+import { StateCreator } from 'zustand'
 
 export function ipcPersist<T extends object>(
   keys: Array<keyof T & string>,
-  creator: StateCreator<T>
+  creator: StateCreator<T>,
 ): StateCreator<T> {
   return (set, get, api) => {
     const wrappedSet: typeof set = (partial, replace) => {
-      const prev = get();
-      set(partial, replace);
-      const next = get();
+      const prev = get()
+      set(partial, replace)
+      const next = get()
       for (const key of keys) {
         if (prev[key] !== next[key]) {
-          window.electronAPI.setState(key, next[key]);
+          window.electronAPI.setState(key, next[key])
         }
       }
-    };
-    return creator(wrappedSet, get, api);
-  };
+    }
+    return creator(wrappedSet, get, api)
+  }
 }
 
 // Usage
@@ -246,10 +245,10 @@ export const useAppStore = create<AppState>(
     theme: 'light',
     recentFiles: [],
     sidebarOpen: true,
-    setTheme: (theme) => set({ theme }),        // auto-persisted
+    setTheme: (theme) => set({ theme }), // auto-persisted
     toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })), // not persisted
-  }))
-);
+  })),
+)
 ```
 
 ---
@@ -260,30 +259,35 @@ For rapidly changing state (window resize, editor content), debounce writes:
 
 ```typescript
 // main/utils/debounced-store.ts
-import store from '../store';
+import store from '../store'
 
-const pending = new Map<string, NodeJS.Timeout>();
+const pending = new Map<string, NodeJS.Timeout>()
 
 export function debouncedSet<K extends keyof typeof store.store>(
-  key: K, value: (typeof store.store)[K], delayMs = 500
+  key: K,
+  value: (typeof store.store)[K],
+  delayMs = 500,
 ) {
-  const existing = pending.get(key as string);
-  if (existing) clearTimeout(existing);
-  pending.set(key as string, setTimeout(() => {
-    store.set(key, value);
-    pending.delete(key as string);
-  }, delayMs));
+  const existing = pending.get(key as string)
+  if (existing) clearTimeout(existing)
+  pending.set(
+    key as string,
+    setTimeout(() => {
+      store.set(key, value)
+      pending.delete(key as string)
+    }, delayMs),
+  )
 }
 
 export function flushPendingWrites() {
-  for (const [, timeout] of pending) clearTimeout(timeout);
-  pending.clear();
+  for (const [, timeout] of pending) clearTimeout(timeout)
+  pending.clear()
 }
 ```
 
 ```typescript
 // main/main.ts -- flush before quit
-app.on('before-quit', () => flushPendingWrites());
+app.on('before-quit', () => flushPendingWrites())
 ```
 
 ---
@@ -306,15 +310,15 @@ Auth tokens and API keys must never live in renderer state or Zustand.
 // WRONG: token accessible to any renderer code
 const useAuth = create((set) => ({
   token: localStorage.getItem('auth-token'),
-}));
+}))
 
 // RIGHT: token stays in main process
-let authToken: string | null = null;
-ipcMain.handle('auth-get-token', () => authToken);
+let authToken: string | null = null
+ipcMain.handle('auth-get-token', () => authToken)
 ipcMain.handle('auth-set-token', (_e, token: string) => {
-  authToken = token;
-  store.set('authToken', token);
-});
+  authToken = token
+  store.set('authToken', token)
+})
 ```
 
 See [Context Isolation](../security/context-isolation.md) for why the renderer

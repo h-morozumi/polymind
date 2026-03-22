@@ -11,13 +11,13 @@ disk usage, and differential update size.
 
 ## Size Budget
 
-| Component | Unoptimized | Target | Notes |
-|-----------|------------|--------|-------|
-| Electron binary | ~70 MB | ~70 MB | Fixed cost, cannot reduce |
-| App code (main) | 5-15 MB | 1-3 MB | Tree shaking, minification |
-| App code (renderer) | 10-30 MB | 3-8 MB | Code splitting, lazy loading |
-| Node modules | 30-50 MB | 5-15 MB | Prune devDeps, externalize natives |
-| Assets | 10-30 MB | 5-10 MB | Compress images, subset fonts |
+| Component           | Unoptimized | Target  | Notes                              |
+| ------------------- | ----------- | ------- | ---------------------------------- |
+| Electron binary     | ~70 MB      | ~70 MB  | Fixed cost, cannot reduce          |
+| App code (main)     | 5-15 MB     | 1-3 MB  | Tree shaking, minification         |
+| App code (renderer) | 10-30 MB    | 3-8 MB  | Code splitting, lazy loading       |
+| Node modules        | 30-50 MB    | 5-15 MB | Prune devDeps, externalize natives |
+| Assets              | 10-30 MB    | 5-10 MB | Compress images, subset fonts      |
 
 ---
 
@@ -25,8 +25,8 @@ disk usage, and differential update size.
 
 ```typescript
 // electron.vite.config.ts
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
@@ -68,7 +68,7 @@ export default defineConfig({
       chunkSizeWarningLimit: 500,
     },
   },
-});
+})
 ```
 
 ### Source Map Strategy
@@ -87,13 +87,13 @@ rm -rf ./out/renderer/**/*.map
 
 ```typescript
 // BAD - Imports entire library
-import _ from 'lodash';
+import _ from 'lodash'
 
 // GOOD - Named import from subpath
-import groupBy from 'lodash/groupBy';
+import groupBy from 'lodash/groupBy'
 
 // BEST - ES module version for full tree shaking
-import { groupBy } from 'lodash-es';
+import { groupBy } from 'lodash-es'
 ```
 
 Mark packages as side-effect-free in `package.json`:
@@ -109,11 +109,11 @@ Mark packages as side-effect-free in `package.json`:
 ### Route-Based Code Splitting
 
 ```tsx
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react'
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Analytics = lazy(() => import('./pages/Analytics'));
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Analytics = lazy(() => import('./pages/Analytics'))
 
 function App() {
   return (
@@ -124,7 +124,7 @@ function App() {
         <Route path="/analytics" element={<Analytics />} />
       </Routes>
     </Suspense>
-  );
+  )
 }
 ```
 
@@ -132,8 +132,8 @@ function App() {
 
 ```typescript
 export async function runHeavyAnalysis(data: Buffer): Promise<Result> {
-  const sharp = await import('sharp'); // 25+ MB, load only when needed
-  return sharp.default(data).resize(800, 600).toBuffer();
+  const sharp = await import('sharp') // 25+ MB, load only when needed
+  return sharp.default(data).resize(800, 600).toBuffer()
 }
 ```
 
@@ -143,21 +143,22 @@ export async function runHeavyAnalysis(data: Buffer): Promise<Result> {
 
 ```typescript
 // electron.vite.config.ts - Add visualizer in analyze mode
-import { visualizer } from 'rollup-plugin-visualizer';
+import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
   renderer: {
     plugins: [
       react(),
-      process.env.ANALYZE && visualizer({
-        filename: './bundle-report.html',
-        open: true,
-        gzipSize: true,
-        template: 'treemap',
-      }),
+      process.env.ANALYZE &&
+        visualizer({
+          filename: './bundle-report.html',
+          open: true,
+          gzipSize: true,
+          template: 'treemap',
+        }),
     ].filter(Boolean),
   },
-});
+})
 ```
 
 ```bash
@@ -191,7 +192,7 @@ module.exports = {
       unpackDir: '{node_modules/sharp,node_modules/better-sqlite3}',
     },
   },
-};
+}
 ```
 
 Unpack native `.node` addons, files accessed via `fs` with absolute paths, large
@@ -228,7 +229,7 @@ export default defineConfig({
       },
     },
   },
-});
+})
 ```
 
 ---

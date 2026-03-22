@@ -17,11 +17,11 @@ const win = new BrowserWindow({
     nodeIntegration: false,
     preload: path.join(__dirname, 'preload.js'),
     // Additional hardening:
-    webviewTag: false,              // Disable <webview> unless needed
+    webviewTag: false, // Disable <webview> unless needed
     allowRunningInsecureContent: false,
     experimentalFeatures: false,
   },
-});
+})
 ```
 
 ### Checklist
@@ -66,11 +66,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadData: () => ipcRenderer.invoke('load-data'),
   // Event listeners return cleanup functions
   onProgress: (cb: (pct: number) => void) => {
-    const handler = (_e: IpcRendererEvent, pct: number) => cb(pct);
-    ipcRenderer.on('progress', handler);
-    return () => ipcRenderer.removeListener('progress', handler);
+    const handler = (_e: IpcRendererEvent, pct: number) => cb(pct)
+    ipcRenderer.on('progress', handler)
+    return () => ipcRenderer.removeListener('progress', handler)
   },
-});
+})
 ```
 
 ## 3. IPC Argument Validation
@@ -93,31 +93,31 @@ path to command injection in Electron apps.
 
 ```typescript
 // main.ts - SECURE: Validate all IPC arguments
-import { ipcMain } from 'electron';
-import path from 'path';
-import fs from 'fs/promises';
+import { ipcMain } from 'electron'
+import path from 'path'
+import fs from 'fs/promises'
 
-const ALLOWED_BASE_DIR = '/home/user/documents';
+const ALLOWED_BASE_DIR = '/home/user/documents'
 
 ipcMain.handle('read-file', async (_event, filePath: unknown) => {
   // Type validation
   if (typeof filePath !== 'string') {
-    throw new Error('filePath must be a string');
+    throw new Error('filePath must be a string')
   }
 
   // Length validation
   if (filePath.length > 500) {
-    throw new Error('filePath too long');
+    throw new Error('filePath too long')
   }
 
   // Path traversal prevention
-  const resolved = path.resolve(ALLOWED_BASE_DIR, filePath);
+  const resolved = path.resolve(ALLOWED_BASE_DIR, filePath)
   if (!resolved.startsWith(ALLOWED_BASE_DIR)) {
-    throw new Error('Access denied: path outside allowed directory');
+    throw new Error('Access denied: path outside allowed directory')
   }
 
-  return fs.readFile(resolved, 'utf-8');
-});
+  return fs.readFile(resolved, 'utf-8')
+})
 ```
 
 For typed IPC patterns that enforce validation at compile time, see
@@ -167,17 +167,17 @@ arbitrary protocol handler exploitation.
 // AUDIT: Verify this pattern exists in main process
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
-    const parsed = new URL(url);
+    const parsed = new URL(url)
     if (parsed.protocol !== 'file:' && parsed.protocol !== 'app:') {
-      event.preventDefault();
+      event.preventDefault()
     }
-  });
+  })
 
   contents.setWindowOpenHandler(({ url }) => {
-    safeOpenExternal(url); // Validated helper function
-    return { action: 'deny' };
-  });
-});
+    safeOpenExternal(url) // Validated helper function
+    return { action: 'deny' }
+  })
+})
 ```
 
 ## 6. Auto-Update Security
@@ -200,10 +200,10 @@ simultaneously.
 
 ```typescript
 // main.ts - Secure auto-update configuration
-import { autoUpdater } from 'electron-updater';
+import { autoUpdater } from 'electron-updater'
 
-autoUpdater.autoDownload = false; // Manual control over downloads
-autoUpdater.allowDowngrade = false;
+autoUpdater.autoDownload = false // Manual control over downloads
+autoUpdater.allowDowngrade = false
 
 autoUpdater.setFeedURL({
   provider: 'github',
@@ -211,15 +211,15 @@ autoUpdater.setFeedURL({
   repo: 'your-app',
   // For private repos:
   // token: process.env.GH_TOKEN,
-});
+})
 
 autoUpdater.on('update-available', (info) => {
   // Notify user, let them choose to download
   mainWindow.webContents.send('update-available', {
     version: info.version,
     releaseNotes: info.releaseNotes,
-  });
-});
+  })
+})
 
 // Never expose update control to the renderer via IPC
 // Updates should be triggered by main process logic only
@@ -276,10 +276,10 @@ if (app.isPackaged) {
   app.on('browser-window-created', (_event, win) => {
     win.webContents.on('before-input-event', (event, input) => {
       if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) {
-        event.preventDefault();
+        event.preventDefault()
       }
-    });
-  });
+    })
+  })
 }
 ```
 
@@ -323,19 +323,19 @@ jobs:
 
 ## Common Vulnerability Patterns
 
-| Pattern | Severity | Fix |
-|---------|----------|-----|
-| `nodeIntegration: true` | CRITICAL | Set to `false`, use preload |
-| Raw `ipcRenderer` exposure | CRITICAL | Expose named functions only |
-| Unvalidated `shell.openExternal` | HIGH | Validate protocol and host |
-| Missing CSP | HIGH | Add CSP via session headers |
-| `eval()` in renderer | HIGH | Remove eval, use safe alternatives |
-| Unvalidated IPC file paths | CRITICAL | Resolve and check against allowlist |
-| Dynamic IPC channel names | HIGH | Use static channel names only |
-| Missing navigation guards | HIGH | Add `will-navigate` handler |
-| Unsigned builds | MEDIUM | Enable code signing |
-| `webSecurity: false` | CRITICAL | Never set to false |
-| Missing permission handler | MEDIUM | Add `setPermissionRequestHandler` |
+| Pattern                          | Severity | Fix                                 |
+| -------------------------------- | -------- | ----------------------------------- |
+| `nodeIntegration: true`          | CRITICAL | Set to `false`, use preload         |
+| Raw `ipcRenderer` exposure       | CRITICAL | Expose named functions only         |
+| Unvalidated `shell.openExternal` | HIGH     | Validate protocol and host          |
+| Missing CSP                      | HIGH     | Add CSP via session headers         |
+| `eval()` in renderer             | HIGH     | Remove eval, use safe alternatives  |
+| Unvalidated IPC file paths       | CRITICAL | Resolve and check against allowlist |
+| Dynamic IPC channel names        | HIGH     | Use static channel names only       |
+| Missing navigation guards        | HIGH     | Add `will-navigate` handler         |
+| Unsigned builds                  | MEDIUM   | Enable code signing                 |
+| `webSecurity: false`             | CRITICAL | Never set to false                  |
+| Missing permission handler       | MEDIUM   | Add `setPermissionRequestHandler`   |
 
 ## Audit Frequency
 

@@ -62,9 +62,9 @@ Vite configuration that can have its own plugins, aliases, and build targets.
 
 ```typescript
 // electron.vite.config.ts
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
   main: {
@@ -103,7 +103,7 @@ export default defineConfig({
       },
     },
   },
-});
+})
 ```
 
 ---
@@ -226,6 +226,7 @@ The `electron-vite dev` command orchestrates three coordinated build processes:
 ```
 
 When files change during development:
+
 - **Renderer changes**: Instant HMR via Vite, no restart needed
 - **Preload changes**: Preload script is rebuilt and the BrowserWindow is reloaded
 - **Main process changes**: Main process is rebuilt and Electron is restarted
@@ -252,11 +253,11 @@ VITE_API_URL=https://api.example.com
 
 ```typescript
 // In renderer code
-const title = import.meta.env.VITE_APP_TITLE;
-const apiUrl = import.meta.env.VITE_API_URL;
+const title = import.meta.env.VITE_APP_TITLE
+const apiUrl = import.meta.env.VITE_API_URL
 
 // In main process code (use process.env as normal)
-const nodeEnv = process.env.NODE_ENV;
+const nodeEnv = process.env.NODE_ENV
 ```
 
 electron-vite also injects `ELECTRON_RENDERER_URL` into the main process during
@@ -289,9 +290,9 @@ resolve: {
       "@/*": ["./src/renderer/src/*"],
       "@shared/*": ["./src/shared/*"],
       "@components/*": ["./src/renderer/src/components/*"],
-      "@hooks/*": ["./src/renderer/src/hooks/*"]
-    }
-  }
+      "@hooks/*": ["./src/renderer/src/hooks/*"],
+    },
+  },
 }
 ```
 

@@ -27,8 +27,8 @@ it directly.
 
 ```typescript
 // tests/unit/main/file-handlers.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerFileHandlers } from '../../../src/main/ipc/file-handlers';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { registerFileHandlers } from '../../../src/main/ipc/file-handlers'
 
 // Mock Electron
 vi.mock('electron', () => ({
@@ -38,47 +38,49 @@ vi.mock('electron', () => ({
   dialog: {
     showSaveDialog: vi.fn(),
   },
-}));
+}))
 
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog } from 'electron'
 
 describe('File Handlers', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    registerFileHandlers();
-  });
+    vi.clearAllMocks()
+    registerFileHandlers()
+  })
 
   it('registers save-file handler', () => {
-    expect(ipcMain.handle).toHaveBeenCalledWith('save-file', expect.any(Function));
-  });
+    expect(ipcMain.handle).toHaveBeenCalledWith('save-file', expect.any(Function))
+  })
 
   it('save-file handler writes content', async () => {
-    const handler = (ipcMain.handle as any).mock.calls
-      .find(([channel]: [string]) => channel === 'save-file')[1];
+    const handler = (ipcMain.handle as any).mock.calls.find(
+      ([channel]: [string]) => channel === 'save-file',
+    )[1]
 
     vi.mocked(dialog.showSaveDialog).mockResolvedValue({
       canceled: false,
       filePath: '/tmp/test.txt',
-    });
+    })
 
-    const result = await handler({}, 'test content');
-    expect(result.success).toBe(true);
-  });
+    const result = await handler({}, 'test content')
+    expect(result.success).toBe(true)
+  })
 
   it('handles cancelled dialog gracefully', async () => {
-    const handler = (ipcMain.handle as any).mock.calls
-      .find(([channel]: [string]) => channel === 'save-file')[1];
+    const handler = (ipcMain.handle as any).mock.calls.find(
+      ([channel]: [string]) => channel === 'save-file',
+    )[1]
 
     vi.mocked(dialog.showSaveDialog).mockResolvedValue({
       canceled: true,
       filePath: undefined,
-    });
+    })
 
-    const result = await handler({}, 'test content');
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Save cancelled');
-  });
-});
+    const result = await handler({}, 'test content')
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Save cancelled')
+  })
+})
 ```
 
 ### Handler Extraction Helper
@@ -88,13 +90,12 @@ a reusable helper:
 
 ```typescript
 // tests/helpers/ipc-test-utils.ts
-import { ipcMain } from 'electron';
+import { ipcMain } from 'electron'
 
 export function getHandler(channel: string) {
-  const call = (ipcMain.handle as any).mock.calls
-    .find(([ch]: [string]) => ch === channel);
-  if (!call) throw new Error(`No handler registered for channel: ${channel}`);
-  return call[1];
+  const call = (ipcMain.handle as any).mock.calls.find(([ch]: [string]) => ch === channel)
+  if (!call) throw new Error(`No handler registered for channel: ${channel}`)
+  return call[1]
 }
 ```
 
@@ -199,40 +200,36 @@ Preload scripts are thin wrappers around `ipcRenderer`. Test them by mocking
 
 ```typescript
 // tests/unit/preload/preload.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('electron', () => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
   ipcRenderer: { invoke: vi.fn(), on: vi.fn(), removeListener: vi.fn() },
-}));
+}))
 
-import { contextBridge, ipcRenderer } from 'electron';
-import '../../../src/preload/index';
+import { contextBridge, ipcRenderer } from 'electron'
+import '../../../src/preload/index'
 
 describe('Preload Script', () => {
   it('exposes electronAPI to main world', () => {
-    expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith(
-      'electronAPI', expect.any(Object)
-    );
-  });
+    expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith('electronAPI', expect.any(Object))
+  })
 
   it('saveFile invokes correct channel', async () => {
-    const api = (contextBridge.exposeInMainWorld as any).mock.calls[0][1];
-    vi.mocked(ipcRenderer.invoke).mockResolvedValue({ success: true });
-    await api.saveFile('content');
-    expect(ipcRenderer.invoke).toHaveBeenCalledWith('save-file', 'content');
-  });
+    const api = (contextBridge.exposeInMainWorld as any).mock.calls[0][1]
+    vi.mocked(ipcRenderer.invoke).mockResolvedValue({ success: true })
+    await api.saveFile('content')
+    expect(ipcRenderer.invoke).toHaveBeenCalledWith('save-file', 'content')
+  })
 
   it('onFileChanged registers and returns cleanup', () => {
-    const api = (contextBridge.exposeInMainWorld as any).mock.calls[0][1];
-    const cleanup = api.onFileChanged(vi.fn());
-    expect(ipcRenderer.on).toHaveBeenCalledWith('file-changed', expect.any(Function));
-    cleanup();
-    expect(ipcRenderer.removeListener).toHaveBeenCalledWith(
-      'file-changed', expect.any(Function)
-    );
-  });
-});
+    const api = (contextBridge.exposeInMainWorld as any).mock.calls[0][1]
+    const cleanup = api.onFileChanged(vi.fn())
+    expect(ipcRenderer.on).toHaveBeenCalledWith('file-changed', expect.any(Function))
+    cleanup()
+    expect(ipcRenderer.removeListener).toHaveBeenCalledWith('file-changed', expect.any(Function))
+  })
+})
 ```
 
 ---

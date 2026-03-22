@@ -13,18 +13,18 @@ This template provides a type-safe preload script that bridges the main and rend
  * TODO: Update type declarations in preload.d.ts
  */
 
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 // Type-safe invoke wrapper
 function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
-  return ipcRenderer.invoke(channel, ...args);
+  return ipcRenderer.invoke(channel, ...args)
 }
 
 // Type-safe event listener with cleanup
 function on<T>(channel: string, callback: (value: T) => void): () => void {
-  const handler = (_event: IpcRendererEvent, value: T) => callback(value);
-  ipcRenderer.on(channel, handler);
-  return () => ipcRenderer.removeListener(channel, handler);
+  const handler = (_event: IpcRendererEvent, value: T) => callback(value)
+  ipcRenderer.on(channel, handler)
+  return () => ipcRenderer.removeListener(channel, handler)
 }
 
 // Expose API to renderer
@@ -41,7 +41,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // TODO: Add your event listeners (always return cleanup function!)
   onFileChanged: (callback: (path: string) => void) => on('file-changed', callback),
   onUpdateAvailable: (callback: (version: string) => void) => on('update-available', callback),
-});
+})
 ```
 
 The following type declaration file should be placed alongside your preload script so the renderer process gets full type safety when accessing `window.electronAPI`.
@@ -50,24 +50,24 @@ The following type declaration file should be placed alongside your preload scri
 // preload.d.ts
 interface ElectronAPI {
   // File Operations
-  saveFile: (content: string) => Promise<{ success: boolean; path: string }>;
-  openFile: () => Promise<{ success: boolean; content: string; path: string }>;
+  saveFile: (content: string) => Promise<{ success: boolean; path: string }>
+  openFile: () => Promise<{ success: boolean; content: string; path: string }>
 
   // App Info
-  getVersion: () => Promise<string>;
+  getVersion: () => Promise<string>
 
   // Events (return cleanup function)
-  onFileChanged: (callback: (path: string) => void) => () => void;
-  onUpdateAvailable: (callback: (version: string) => void) => () => void;
+  onFileChanged: (callback: (path: string) => void) => () => void
+  onUpdateAvailable: (callback: (version: string) => void) => () => void
 }
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI: ElectronAPI
   }
 }
 
-export {};
+export {}
 ```
 
 ## Customization Notes

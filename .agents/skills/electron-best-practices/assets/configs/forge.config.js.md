@@ -4,14 +4,14 @@ Electron Forge handles the entire packaging and distribution pipeline for Electr
 
 ```javascript
 // forge.config.js
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const { FusesPlugin } = require('@electron-forge/plugin-fuses')
+const { FuseV1Options, FuseVersion } = require('@electron/fuses')
 
 module.exports = {
   packagerConfig: {
     asar: true,
     icon: './resources/icon',
-    appBundleId: 'com.example.myapp',   // TODO: Set your bundle ID
+    appBundleId: 'com.example.myapp', // TODO: Set your bundle ID
 
     // macOS Code Signing
     osxSign: {
@@ -82,8 +82,8 @@ module.exports = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'your-org',    // TODO: Set GitHub owner
-          name: 'your-app',    // TODO: Set repo name
+          owner: 'your-org', // TODO: Set GitHub owner
+          name: 'your-app', // TODO: Set repo name
         },
         prerelease: false,
       },
@@ -104,10 +104,10 @@ module.exports = {
 
   hooks: {
     postPackage: async (config, packageResult) => {
-      console.log(`Packaged: ${packageResult.outputPaths.join(', ')}`);
+      console.log(`Packaged: ${packageResult.outputPaths.join(', ')}`)
     },
   },
-};
+}
 ```
 
 ## Notes

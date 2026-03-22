@@ -14,20 +14,20 @@ This template provides a structured pattern for IPC handler modules in the main 
  * TODO: Add input validation
  */
 
-import { ipcMain, dialog } from 'electron';
-import { readFile, writeFile } from 'fs/promises';
+import { ipcMain, dialog } from 'electron'
+import { readFile, writeFile } from 'fs/promises'
 
 // Result type for consistent error handling across IPC
 type Result<T> =
   | { success: true; data: T }
-  | { success: false; error: { message: string; code: string } };
+  | { success: false; error: { message: string; code: string } }
 
 function ok<T>(data: T): Result<T> {
-  return { success: true, data };
+  return { success: true, data }
 }
 
 function err<T>(message: string, code: string): Result<T> {
-  return { success: false, error: { message, code } };
+  return { success: false, error: { message, code } }
 }
 
 export function registerFileHandlers(): void {
@@ -36,41 +36,41 @@ export function registerFileHandlers(): void {
       // TODO: Add input validation
       const { canceled, filePath } = await dialog.showSaveDialog({
         filters: [{ name: 'Text Files', extensions: ['txt'] }],
-      });
+      })
 
       if (canceled || !filePath) {
-        return err('Save cancelled', 'USER_CANCELLED');
+        return err('Save cancelled', 'USER_CANCELLED')
       }
 
-      await writeFile(filePath, content, 'utf-8');
-      return ok(filePath);
+      await writeFile(filePath, content, 'utf-8')
+      return ok(filePath)
     } catch (e) {
-      return err((e as Error).message, 'WRITE_ERROR');
+      return err((e as Error).message, 'WRITE_ERROR')
     }
-  });
+  })
 
   ipcMain.handle('open-file', async (): Promise<Result<{ content: string; path: string }>> => {
     try {
       const { canceled, filePaths } = await dialog.showOpenDialog({
         properties: ['openFile'],
         filters: [{ name: 'Text Files', extensions: ['txt'] }],
-      });
+      })
 
       if (canceled || filePaths.length === 0) {
-        return err('Open cancelled', 'USER_CANCELLED');
+        return err('Open cancelled', 'USER_CANCELLED')
       }
 
-      const content = await readFile(filePaths[0], 'utf-8');
-      return ok({ content, path: filePaths[0] });
+      const content = await readFile(filePaths[0], 'utf-8')
+      return ok({ content, path: filePaths[0] })
     } catch (e) {
-      return err((e as Error).message, 'READ_ERROR');
+      return err((e as Error).message, 'READ_ERROR')
     }
-  });
+  })
 
   ipcMain.handle('get-app-version', () => {
-    const { app } = require('electron');
-    return app.getVersion();
-  });
+    const { app } = require('electron')
+    return app.getVersion()
+  })
 
   // TODO: Add more handlers for your domain
 }

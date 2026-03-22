@@ -34,77 +34,68 @@ broadcast events.
 
 ```typescript
 // src/main/store.ts
-import Store from 'electron-store';
-import { BrowserWindow, ipcMain } from 'electron';
+import Store from 'electron-store'
+import { BrowserWindow, ipcMain } from 'electron'
 
 interface AppState {
-  theme: 'light' | 'dark';
-  recentFiles: string[];
+  theme: 'light' | 'dark'
+  recentFiles: string[]
   editorSettings: {
-    fontSize: number;
-    wordWrap: boolean;
-    tabSize: number;
-  };
+    fontSize: number
+    wordWrap: boolean
+    tabSize: number
+  }
 }
 
 const defaults: AppState = {
   theme: 'light',
   recentFiles: [],
   editorSettings: { fontSize: 14, wordWrap: true, tabSize: 2 },
-};
+}
 
-const store = new Store<AppState>({ defaults });
+const store = new Store<AppState>({ defaults })
 
 // Broadcast a state change to all windows
-function broadcastStateChange<K extends keyof AppState>(
-  key: K,
-  value: AppState[K],
-): void {
+function broadcastStateChange<K extends keyof AppState>(key: K, value: AppState[K]): void {
   BrowserWindow.getAllWindows().forEach((win) => {
     if (!win.isDestroyed()) {
-      win.webContents.send(`state:${key}`, value);
+      win.webContents.send(`state:${key}`, value)
     }
-  });
+  })
 }
 
 // Watch for changes and broadcast automatically
 export function watchState<K extends keyof AppState>(key: K): void {
   store.onDidChange(key, (newValue) => {
     if (newValue !== undefined) {
-      broadcastStateChange(key, newValue);
+      broadcastStateChange(key, newValue)
     }
-  });
+  })
 }
 
 // Typed getter and setter
 export function getState<K extends keyof AppState>(key: K): AppState[K] {
-  return store.get(key);
+  return store.get(key)
 }
 
-export function setState<K extends keyof AppState>(
-  key: K,
-  value: AppState[K],
-): void {
-  store.set(key, value);
+export function setState<K extends keyof AppState>(key: K, value: AppState[K]): void {
+  store.set(key, value)
   // Note: store.onDidChange triggers broadcastStateChange automatically
 }
 
 // Register IPC handlers for state operations
 export function registerStateHandlers(): void {
   ipcMain.handle('state:get', (_event, key: keyof AppState) => {
-    return getState(key);
-  });
+    return getState(key)
+  })
 
-  ipcMain.handle(
-    'state:set',
-    (_event, key: keyof AppState, value: AppState[keyof AppState]) => {
-      setState(key, value as AppState[typeof key]);
-    },
-  );
+  ipcMain.handle('state:set', (_event, key: keyof AppState, value: AppState[keyof AppState]) => {
+    setState(key, value as AppState[typeof key])
+  })
 
   // Watch all keys for broadcasting
-  const keys: (keyof AppState)[] = ['theme', 'recentFiles', 'editorSettings'];
-  keys.forEach((key) => watchState(key));
+  const keys: (keyof AppState)[] = ['theme', 'recentFiles', 'editorSettings']
+  keys.forEach((key) => watchState(key))
 }
 ```
 
@@ -112,63 +103,56 @@ export function registerStateHandlers(): void {
 
 ```typescript
 // src/preload/index.ts
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // State management
   getState: (key: string) => ipcRenderer.invoke('state:get', key),
 
-  setState: (key: string, value: unknown) =>
-    ipcRenderer.invoke('state:set', key, value),
+  setState: (key: string, value: unknown) => ipcRenderer.invoke('state:set', key, value),
 
   onStateChange: (key: string, callback: (value: unknown) => void) => {
-    const handler = (_event: IpcRendererEvent, value: unknown) => callback(value);
-    ipcRenderer.on(`state:${key}`, handler);
-    return () => ipcRenderer.removeListener(`state:${key}`, handler);
+    const handler = (_event: IpcRendererEvent, value: unknown) => callback(value)
+    ipcRenderer.on(`state:${key}`, handler)
+    return () => ipcRenderer.removeListener(`state:${key}`, handler)
   },
-});
+})
 ```
 
 ### Renderer Hook
 
 ```typescript
 // src/renderer/src/hooks/useSharedState.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'
 
-export function useSharedState<T>(
-  key: string,
-  defaultValue: T,
-): [T, (value: T) => void] {
-  const [value, setValue] = useState<T>(defaultValue);
+export function useSharedState<T>(key: string, defaultValue: T): [T, (value: T) => void] {
+  const [value, setValue] = useState<T>(defaultValue)
 
   useEffect(() => {
     // Load initial value from main process store
     window.electronAPI.getState(key).then((stored: T | undefined) => {
       if (stored !== undefined) {
-        setValue(stored);
+        setValue(stored)
       }
-    });
+    })
 
     // Subscribe to changes broadcast from main process
-    const cleanup = window.electronAPI.onStateChange(
-      key,
-      (newValue: unknown) => {
-        setValue(newValue as T);
-      },
-    );
+    const cleanup = window.electronAPI.onStateChange(key, (newValue: unknown) => {
+      setValue(newValue as T)
+    })
 
-    return cleanup;
-  }, [key]);
+    return cleanup
+  }, [key])
 
   const updateValue = useCallback(
     (newValue: T) => {
-      setValue(newValue); // Optimistic local update
-      window.electronAPI.setState(key, newValue); // Persist and broadcast
+      setValue(newValue) // Optimistic local update
+      window.electronAPI.setState(key, newValue) // Persist and broadcast
     },
     [key],
-  );
+  )
 
-  return [value, updateValue];
+  return [value, updateValue]
 }
 ```
 
@@ -200,16 +184,16 @@ IPC synchronization pattern for a more ergonomic developer experience.
 
 ```typescript
 // src/renderer/src/stores/appStore.ts
-import { create } from 'zustand';
+import { create } from 'zustand'
 
 interface AppStore {
-  theme: 'light' | 'dark';
-  fontSize: number;
-  recentFiles: string[];
-  setTheme: (theme: 'light' | 'dark') => void;
-  setFontSize: (size: number) => void;
-  addRecentFile: (path: string) => void;
-  initFromMain: () => Promise<void>;
+  theme: 'light' | 'dark'
+  fontSize: number
+  recentFiles: string[]
+  setTheme: (theme: 'light' | 'dark') => void
+  setFontSize: (size: number) => void
+  addRecentFile: (path: string) => void
+  initFromMain: () => Promise<void>
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -218,25 +202,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
   recentFiles: [],
 
   setTheme: (theme) => {
-    set({ theme });
-    window.electronAPI.setState('theme', theme);
+    set({ theme })
+    window.electronAPI.setState('theme', theme)
   },
 
   setFontSize: (fontSize) => {
-    set({ fontSize });
+    set({ fontSize })
     window.electronAPI.setState('editorSettings', {
       ...get(),
       fontSize,
-    });
+    })
   },
 
   addRecentFile: (path) => {
-    const updated = [path, ...get().recentFiles.filter((f) => f !== path)].slice(
-      0,
-      10,
-    );
-    set({ recentFiles: updated });
-    window.electronAPI.setState('recentFiles', updated);
+    const updated = [path, ...get().recentFiles.filter((f) => f !== path)].slice(0, 10)
+    set({ recentFiles: updated })
+    window.electronAPI.setState('recentFiles', updated)
   },
 
   initFromMain: async () => {
@@ -244,14 +225,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       window.electronAPI.getState('theme'),
       window.electronAPI.getState('editorSettings'),
       window.electronAPI.getState('recentFiles'),
-    ]);
+    ])
     set({
       theme: theme ?? 'light',
       fontSize: editorSettings?.fontSize ?? 14,
       recentFiles: recentFiles ?? [],
-    });
+    })
   },
-}));
+}))
 ```
 
 ```typescript
@@ -295,25 +276,25 @@ in a dedicated manager class.
 
 ```typescript
 // src/main/window-manager.ts
-import { BrowserWindow, screen } from 'electron';
-import { join } from 'path';
+import { BrowserWindow, screen } from 'electron'
+import { join } from 'path'
 
 interface WindowConfig {
-  id: string;
-  width: number;
-  height: number;
-  route?: string;
-  parent?: BrowserWindow;
+  id: string
+  width: number
+  height: number
+  route?: string
+  parent?: BrowserWindow
 }
 
 class WindowManager {
-  private windows = new Map<string, BrowserWindow>();
+  private windows = new Map<string, BrowserWindow>()
 
   create(config: WindowConfig): BrowserWindow {
     if (this.windows.has(config.id)) {
-      const existing = this.windows.get(config.id)!;
-      existing.focus();
-      return existing;
+      const existing = this.windows.get(config.id)!
+      existing.focus()
+      return existing
     }
 
     const win = new BrowserWindow({
@@ -326,77 +307,77 @@ class WindowManager {
         sandbox: true,
         nodeIntegration: false,
       },
-    });
+    })
 
     // Load the renderer with an optional route hash
-    const baseUrl = process.env['ELECTRON_RENDERER_URL'];
+    const baseUrl = process.env['ELECTRON_RENDERER_URL']
     if (baseUrl) {
-      const url = config.route ? `${baseUrl}#${config.route}` : baseUrl;
-      win.loadURL(url);
+      const url = config.route ? `${baseUrl}#${config.route}` : baseUrl
+      win.loadURL(url)
     } else {
-      const filePath = join(__dirname, '../renderer/index.html');
-      const hash = config.route ? `#${config.route}` : '';
-      win.loadFile(filePath, { hash });
+      const filePath = join(__dirname, '../renderer/index.html')
+      const hash = config.route ? `#${config.route}` : ''
+      win.loadFile(filePath, { hash })
     }
 
     win.on('closed', () => {
-      this.windows.delete(config.id);
-    });
+      this.windows.delete(config.id)
+    })
 
-    this.windows.set(config.id, win);
-    return win;
+    this.windows.set(config.id, win)
+    return win
   }
 
   get(id: string): BrowserWindow | undefined {
-    return this.windows.get(id);
+    return this.windows.get(id)
   }
 
   getAll(): BrowserWindow[] {
-    return Array.from(this.windows.values());
+    return Array.from(this.windows.values())
   }
 
   broadcast(channel: string, ...args: unknown[]): void {
     this.windows.forEach((win) => {
       if (!win.isDestroyed()) {
-        win.webContents.send(channel, ...args);
+        win.webContents.send(channel, ...args)
       }
-    });
+    })
   }
 
   closeAll(): void {
     this.windows.forEach((win) => {
-      if (!win.isDestroyed()) win.close();
-    });
+      if (!win.isDestroyed()) win.close()
+    })
   }
 }
 
-export const windowManager = new WindowManager();
+export const windowManager = new WindowManager()
 ```
 
 ```typescript
 // src/main/index.ts -- Using the window manager
-import { app, ipcMain } from 'electron';
-import { windowManager } from './window-manager';
-import { registerStateHandlers } from './store';
+import { app, ipcMain } from 'electron'
+import { windowManager } from './window-manager'
+import { registerStateHandlers } from './store'
 
 app.whenReady().then(() => {
-  registerStateHandlers();
+  registerStateHandlers()
 
   // Main editor window
-  windowManager.create({ id: 'main', width: 1200, height: 800 });
+  windowManager.create({ id: 'main', width: 1200, height: 800 })
 
   // Open inspector panel on request
   ipcMain.handle('open-inspector', () => {
-    const main = windowManager.get('main');
+    const main = windowManager.get('main')
     windowManager.create({
       id: 'inspector',
       width: 400,
       height: 600,
       route: '/inspector',
       parent: main,
-    });
-  });
-});
+    })
+  })
+})
 ```
 
 ## Pattern 4: React Portal for Child Windows
@@ -407,15 +388,15 @@ panels, detachable widgets, and tool palettes.
 
 ```typescript
 // src/renderer/src/components/ChildWindow.tsx
-import { useState, useEffect, ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ChildWindowProps {
-  title?: string;
-  width?: number;
-  height?: number;
-  onClose?: () => void;
-  children: ReactNode;
+  title?: string
+  width?: number
+  height?: number
+  onClose?: () => void
+  children: ReactNode
 }
 
 function ChildWindow({
@@ -425,56 +406,56 @@ function ChildWindow({
   onClose,
   children,
 }: ChildWindowProps) {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
+  const [container, setContainer] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
-    const features = `width=${width},height=${height},menubar=no,toolbar=no`;
-    const childWindow = window.open('', '', features);
-    if (!childWindow) return;
+    const features = `width=${width},height=${height},menubar=no,toolbar=no`
+    const childWindow = window.open('', '', features)
+    if (!childWindow) return
 
-    childWindow.document.title = title;
+    childWindow.document.title = title
 
     // Copy stylesheets from parent to child window
-    const styleSheets = Array.from(document.styleSheets);
+    const styleSheets = Array.from(document.styleSheets)
     styleSheets.forEach((sheet) => {
       try {
         if (sheet.href) {
-          const link = childWindow.document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = sheet.href;
-          childWindow.document.head.appendChild(link);
+          const link = childWindow.document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = sheet.href
+          childWindow.document.head.appendChild(link)
         } else if (sheet.cssRules) {
-          const style = childWindow.document.createElement('style');
+          const style = childWindow.document.createElement('style')
           Array.from(sheet.cssRules).forEach((rule) => {
-            style.appendChild(childWindow.document.createTextNode(rule.cssText));
-          });
-          childWindow.document.head.appendChild(style);
+            style.appendChild(childWindow.document.createTextNode(rule.cssText))
+          })
+          childWindow.document.head.appendChild(style)
         }
       } catch {
         // Cross-origin stylesheets may throw; skip them
       }
-    });
+    })
 
     // Create a mount point in the child window
-    const mountPoint = childWindow.document.createElement('div');
-    mountPoint.id = 'child-root';
-    childWindow.document.body.appendChild(mountPoint);
-    setContainer(mountPoint);
+    const mountPoint = childWindow.document.createElement('div')
+    mountPoint.id = 'child-root'
+    childWindow.document.body.appendChild(mountPoint)
+    setContainer(mountPoint)
 
     childWindow.onbeforeunload = () => {
-      onClose?.();
-    };
+      onClose?.()
+    }
 
     return () => {
-      childWindow.close();
-    };
-  }, [title, width, height, onClose]);
+      childWindow.close()
+    }
+  }, [title, width, height, onClose])
 
-  if (!container) return null;
-  return createPortal(children, container);
+  if (!container) return null
+  return createPortal(children, container)
 }
 
-export default ChildWindow;
+export default ChildWindow
 ```
 
 ### Using the Portal Pattern
@@ -512,12 +493,12 @@ function EditorWithInspector() {
 
 The Portal approach has important trade-offs:
 
-| Advantage                        | Limitation                                    |
-|----------------------------------|-----------------------------------------------|
+| Advantage                        | Limitation                                         |
+| -------------------------------- | -------------------------------------------------- |
 | Shared React state and context   | Child windows are less capable than BrowserWindows |
-| No IPC needed for state sync     | No separate preload script                    |
-| Simple component-based API       | Styles must be manually copied                |
-| Parent state changes auto-render | window.open() may be blocked by some policies |
+| No IPC needed for state sync     | No separate preload script                         |
+| Simple component-based API       | Styles must be manually copied                     |
+| Parent state changes auto-render | window.open() may be blocked by some policies      |
 
 For full-featured child windows that need their own preload scripts and security
 context, use BrowserWindow via the Window Manager pattern instead.
@@ -535,14 +516,15 @@ Production applications often combine these patterns:
 ```typescript
 // Typical initialization in main process
 app.whenReady().then(() => {
-  registerStateHandlers();    // Pattern 1: State with IPC broadcasting
+  registerStateHandlers() // Pattern 1: State with IPC broadcasting
 
-  windowManager.create({      // Pattern 3: Window manager
+  windowManager.create({
+    // Pattern 3: Window manager
     id: 'main',
     width: 1200,
     height: 800,
-  });
-});
+  })
+})
 ```
 
 ```typescript

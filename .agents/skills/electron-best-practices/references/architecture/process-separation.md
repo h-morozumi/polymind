@@ -19,13 +19,13 @@ BrowserWindows and handles IPC messages from renderer processes.
 
 ```typescript
 // src/main/index.ts -- Main process capabilities
-import { app, BrowserWindow, dialog, ipcMain, Notification } from 'electron';
-import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
-import Store from 'electron-store';
+import { app, BrowserWindow, dialog, ipcMain, Notification } from 'electron'
+import { readFile, writeFile } from 'fs/promises'
+import { join } from 'path'
+import Store from 'electron-store'
 
 // Full Node.js and Electron API access
-const store = new Store();
+const store = new Store()
 
 app.whenReady().then(() => {
   const win = new BrowserWindow({
@@ -35,22 +35,22 @@ app.whenReady().then(() => {
       sandbox: true,
       nodeIntegration: false,
     },
-  });
+  })
 
   // Handle IPC from renderer processes
   ipcMain.handle('read-file', async (_event, filePath: string) => {
     // Validate the path before accessing the file system
     if (!filePath.startsWith(app.getPath('userData'))) {
-      return { success: false, error: 'Access denied: path outside user data' };
+      return { success: false, error: 'Access denied: path outside user data' }
     }
     try {
-      const content = await readFile(filePath, 'utf-8');
-      return { success: true, data: content };
+      const content = await readFile(filePath, 'utf-8')
+      return { success: true, data: content }
     } catch (err) {
-      return { success: false, error: (err as Error).message };
+      return { success: false, error: (err as Error).message }
     }
-  });
-});
+  })
+})
 ```
 
 ### Preload Process
@@ -67,25 +67,24 @@ to the renderer.
 
 ```typescript
 // src/preload/index.ts -- Preload capabilities (sandboxed)
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 // Available in sandbox: contextBridge, ipcRenderer (limited), Buffer, process (limited)
 // NOT available: require(), fs, path, child_process, native modules
 
 contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (path: string) => ipcRenderer.invoke('read-file', path),
-  writeFile: (path: string, content: string) =>
-    ipcRenderer.invoke('write-file', path, content),
+  writeFile: (path: string, content: string) => ipcRenderer.invoke('write-file', path, content),
   showNotification: (title: string, body: string) =>
     ipcRenderer.invoke('show-notification', title, body),
 
   // Event listener with cleanup
   onProgress: (callback: (percent: number) => void) => {
-    const handler = (_e: IpcRendererEvent, percent: number) => callback(percent);
-    ipcRenderer.on('progress-update', handler);
-    return () => ipcRenderer.removeListener('progress-update', handler);
+    const handler = (_e: IpcRendererEvent, percent: number) => callback(percent)
+    ipcRenderer.on('progress-update', handler)
+    return () => ipcRenderer.removeListener('progress-update', handler)
   },
-});
+})
 ```
 
 ### Renderer Process
@@ -168,24 +167,24 @@ because the renderer is an untrusted boundary.
 
 ## Task Assignment Decision Matrix
 
-| Task                          | Process   | Reason                                          |
-|-------------------------------|-----------|--------------------------------------------------|
-| File system operations        | Main      | Requires Node.js `fs` module                    |
-| Database access               | Main      | Requires native modules (better-sqlite3, etc.)  |
-| Window management             | Main      | BrowserWindow is a main-process API              |
-| HTTP requests (with secrets)  | Main      | Auth tokens must not be exposed to renderer      |
-| HTTP requests (public APIs)   | Renderer  | Acceptable if no secrets involved                |
-| UI rendering                  | Renderer  | React, DOM manipulation, CSS                     |
-| User input handling           | Renderer  | DOM events, form state                           |
-| IPC channel exposure          | Preload   | contextBridge is the only safe bridge            |
-| System dialogs (open/save)    | Main      | `dialog` is a main-process API                   |
-| Notifications                 | Main      | `Notification` is a main-process API             |
-| Clipboard access              | Main (IPC)| `clipboard` API, exposed via IPC                 |
-| App menu construction         | Main      | `Menu` is a main-process API                     |
-| Tray icon management          | Main      | `Tray` is a main-process API                     |
-| Auto-updates                  | Main      | `electron-updater` runs in main                  |
-| Drag and drop (files)         | Renderer  | DOM drag events, send paths via IPC to main      |
-| Keyboard shortcuts            | Both      | `globalShortcut` in main, DOM events in renderer |
+| Task                         | Process    | Reason                                           |
+| ---------------------------- | ---------- | ------------------------------------------------ |
+| File system operations       | Main       | Requires Node.js `fs` module                     |
+| Database access              | Main       | Requires native modules (better-sqlite3, etc.)   |
+| Window management            | Main       | BrowserWindow is a main-process API              |
+| HTTP requests (with secrets) | Main       | Auth tokens must not be exposed to renderer      |
+| HTTP requests (public APIs)  | Renderer   | Acceptable if no secrets involved                |
+| UI rendering                 | Renderer   | React, DOM manipulation, CSS                     |
+| User input handling          | Renderer   | DOM events, form state                           |
+| IPC channel exposure         | Preload    | contextBridge is the only safe bridge            |
+| System dialogs (open/save)   | Main       | `dialog` is a main-process API                   |
+| Notifications                | Main       | `Notification` is a main-process API             |
+| Clipboard access             | Main (IPC) | `clipboard` API, exposed via IPC                 |
+| App menu construction        | Main       | `Menu` is a main-process API                     |
+| Tray icon management         | Main       | `Tray` is a main-process API                     |
+| Auto-updates                 | Main       | `electron-updater` runs in main                  |
+| Drag and drop (files)        | Renderer   | DOM drag events, send paths via IPC to main      |
+| Keyboard shortcuts           | Both       | `globalShortcut` in main, DOM events in renderer |
 
 ## Complete Flow: Saving a File
 
@@ -222,7 +221,7 @@ function SaveButton({ content }: { content: string }) {
 // src/preload/index.ts
 contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (content: string) => ipcRenderer.invoke('save-file', content),
-});
+})
 ```
 
 The `ipcRenderer.invoke()` call sends an asynchronous message to the main process
@@ -236,25 +235,25 @@ process handler returns.
 ipcMain.handle('save-file', async (_event, content: string) => {
   // Validate input from the untrusted renderer
   if (typeof content !== 'string') {
-    return { success: false, error: 'Invalid content type' };
+    return { success: false, error: 'Invalid content type' }
   }
 
   const { canceled, filePath } = await dialog.showSaveDialog({
     defaultPath: 'untitled.txt',
     filters: [{ name: 'Text Files', extensions: ['txt'] }],
-  });
+  })
 
   if (canceled || !filePath) {
-    return { success: false, error: 'User cancelled' };
+    return { success: false, error: 'User cancelled' }
   }
 
   try {
-    await writeFile(filePath, content, 'utf-8');
-    return { success: true, data: filePath };
+    await writeFile(filePath, content, 'utf-8')
+    return { success: true, data: filePath }
   } catch (err) {
-    return { success: false, error: (err as Error).message };
+    return { success: false, error: (err as Error).message }
   }
-});
+})
 ```
 
 ### Step 4: Result Flows Back Through the Promise Chain
@@ -288,36 +287,36 @@ The preload script should be a thin translation layer, not a place for logic.
 contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: async (content: string) => {
     // Do NOT put validation or transformation here
-    const sanitized = content.replace(/<script>/g, '');
-    return ipcRenderer.invoke('save-file', sanitized);
+    const sanitized = content.replace(/<script>/g, '')
+    return ipcRenderer.invoke('save-file', sanitized)
   },
-});
+})
 
 // CORRECT: Preload is a passthrough, logic lives in main
 contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (content: string) => ipcRenderer.invoke('save-file', content),
-});
+})
 ```
 
 ### Mistake 2: Accessing Node.js APIs from the Renderer
 
 ```typescript
 // WRONG: This will throw -- fs is not available in the renderer
-import { readFile } from 'fs/promises';
+import { readFile } from 'fs/promises'
 
 function FileViewer() {
   useEffect(() => {
-    readFile('/path/to/file').then(setContent); // ReferenceError
-  }, []);
+    readFile('/path/to/file').then(setContent) // ReferenceError
+  }, [])
 }
 
 // CORRECT: Use the preload bridge
 function FileViewer() {
   useEffect(() => {
     window.electronAPI.readFile('/path/to/file').then((result) => {
-      if (result.success) setContent(result.data);
-    });
-  }, []);
+      if (result.success) setContent(result.data)
+    })
+  }, [])
 }
 ```
 
@@ -325,12 +324,12 @@ function FileViewer() {
 
 ```typescript
 // WRONG: Gives renderer full IPC access
-contextBridge.exposeInMainWorld('ipc', ipcRenderer);
+contextBridge.exposeInMainWorld('ipc', ipcRenderer)
 
 // CORRECT: Expose only specific, typed functions
 contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (path: string) => ipcRenderer.invoke('read-file', path),
-});
+})
 ```
 
 ## Process Lifecycle
@@ -356,15 +355,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 ```typescript
 // Graceful shutdown with state persistence
 app.on('before-quit', () => {
-  store.set('windowBounds', mainWindow.getBounds());
-});
+  store.set('windowBounds', mainWindow.getBounds())
+})
 
 mainWindow.on('close', (event) => {
   if (hasUnsavedChanges) {
-    event.preventDefault();
-    mainWindow.webContents.send('confirm-close');
+    event.preventDefault()
+    mainWindow.webContents.send('confirm-close')
   }
-});
+})
 ```
 
 ### Renderer Crash Recovery
@@ -374,22 +373,22 @@ detect and recover from crashes:
 
 ```typescript
 mainWindow.webContents.on('render-process-gone', (_event, details) => {
-  console.error('Renderer crashed:', details.reason);
+  console.error('Renderer crashed:', details.reason)
 
   if (details.reason === 'crashed') {
     const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'error',
       buttons: ['Reload', 'Quit'],
       message: 'The application encountered an error. Reload?',
-    });
+    })
 
     if (choice === 0) {
-      mainWindow.reload();
+      mainWindow.reload()
     } else {
-      app.quit();
+      app.quit()
     }
   }
-});
+})
 ```
 
 ## See Also

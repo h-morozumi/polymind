@@ -28,7 +28,7 @@ npm install -D @playwright/test
 
 ```typescript
 // playwright.config.ts
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -39,7 +39,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'electron', testMatch: '**/*.spec.ts' }],
-});
+})
 ```
 
 You do not need Playwright's browser downloads since Electron bundles Chromium.
@@ -50,44 +50,44 @@ You do not need Playwright's browser downloads since Electron bundles Chromium.
 
 ```typescript
 // tests/e2e/app.spec.ts
-import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test'
 
-let electronApp: ElectronApplication;
-let window: Page;
+let electronApp: ElectronApplication
+let window: Page
 
 test.beforeAll(async () => {
   electronApp = await electron.launch({
     args: ['.'],
     env: { ...process.env, NODE_ENV: 'test' },
-  });
-  window = await electronApp.firstWindow();
-  await window.waitForLoadState('domcontentloaded');
-});
+  })
+  window = await electronApp.firstWindow()
+  await window.waitForLoadState('domcontentloaded')
+})
 
 test.afterAll(async () => {
-  await electronApp.close();
-});
+  await electronApp.close()
+})
 
 test('app window has correct title', async () => {
-  const title = await window.title();
-  expect(title).toBe('My Electron App');
-});
+  const title = await window.title()
+  expect(title).toBe('My Electron App')
+})
 
 test('displays main content', async () => {
-  await expect(window.locator('h1')).toHaveText('Welcome');
-});
+  await expect(window.locator('h1')).toHaveText('Welcome')
+})
 
 test('save button triggers file save', async () => {
-  await window.fill('#editor', 'Hello World');
-  await window.click('button#save');
-  await expect(window.locator('.status')).toHaveText('File saved');
-});
+  await window.fill('#editor', 'Hello World')
+  await window.click('button#save')
+  await expect(window.locator('.status')).toHaveText('File saved')
+})
 
 test('visual regression', async () => {
   await expect(window).toHaveScreenshot('main-window.png', {
     maxDiffPixels: 100,
-  });
-});
+  })
+})
 ```
 
 The `args: ['.']` resolves the `main` field in package.json. Set `NODE_ENV`
@@ -103,27 +103,27 @@ to all Electron modules.
 ```typescript
 test('evaluate in main process', async () => {
   const appPath = await electronApp.evaluate(async ({ app }) => {
-    return app.getAppPath();
-  });
-  expect(appPath).toBeTruthy();
-});
+    return app.getAppPath()
+  })
+  expect(appPath).toBeTruthy()
+})
 
 test('evaluate in main process - check version', async () => {
   const version = await electronApp.evaluate(async ({ app }) => {
-    return app.getVersion();
-  });
-  expect(version).toMatch(/^\d+\.\d+\.\d+$/);
-});
+    return app.getVersion()
+  })
+  expect(version).toMatch(/^\d+\.\d+\.\d+$/)
+})
 
 test('verify security settings', async () => {
   const prefs = await electronApp.evaluate(async ({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0];
-    const wp = win.webContents.getLastWebPreferences();
-    return { contextIsolation: wp.contextIsolation, sandbox: wp.sandbox };
-  });
-  expect(prefs.contextIsolation).toBe(true);
-  expect(prefs.sandbox).toBe(true);
-});
+    const win = BrowserWindow.getAllWindows()[0]
+    const wp = win.webContents.getLastWebPreferences()
+    return { contextIsolation: wp.contextIsolation, sandbox: wp.sandbox }
+  })
+  expect(prefs.contextIsolation).toBe(true)
+  expect(prefs.sandbox).toBe(true)
+})
 ```
 
 ---
@@ -135,26 +135,30 @@ process before triggering the UI action.
 
 ```typescript
 // tests/e2e/helpers.ts
-import { ElectronApplication } from '@playwright/test';
+import { ElectronApplication } from '@playwright/test'
 
 export async function stubDialog(app: ElectronApplication, method: string, returnValue: unknown) {
-  await app.evaluate(async ({ dialog }, [method, returnValue]) => {
-    (dialog as any)[`show${method}`] = () => Promise.resolve(returnValue);
-  }, [method, returnValue]);
+  await app.evaluate(
+    async ({ dialog }, [method, returnValue]) => {
+      ;(dialog as any)[`show${method}`] = () => Promise.resolve(returnValue)
+    },
+    [method, returnValue],
+  )
 }
 ```
 
 ```typescript
-import { stubDialog } from './helpers';
+import { stubDialog } from './helpers'
 
 test('save file flow with stubbed dialog', async () => {
   await stubDialog(electronApp, 'SaveDialog', {
-    canceled: false, filePath: '/tmp/test-output.txt',
-  });
-  await window.fill('#editor', 'Test content');
-  await window.click('button#save');
-  await expect(window.locator('.status')).toHaveText('File saved');
-});
+    canceled: false,
+    filePath: '/tmp/test-output.txt',
+  })
+  await window.fill('#editor', 'Test content')
+  await window.click('button#save')
+  await expect(window.locator('.status')).toHaveText('File saved')
+})
 ```
 
 The `electron-playwright-helpers` package provides `findLatestBuild()` for
@@ -170,25 +174,26 @@ results that flow through preload and main process handlers.
 ```typescript
 test('IPC round-trip: save and verify', async () => {
   await stubDialog(electronApp, 'SaveDialog', {
-    canceled: false, filePath: '/tmp/e2e-test.txt',
-  });
-  await window.fill('#editor', 'E2E test content');
-  await window.click('button#save');
+    canceled: false,
+    filePath: '/tmp/e2e-test.txt',
+  })
+  await window.fill('#editor', 'E2E test content')
+  await window.click('button#save')
 
   const fileExists = await electronApp.evaluate(async () => {
-    const fs = require('fs');
-    return fs.existsSync('/tmp/e2e-test.txt');
-  });
-  expect(fileExists).toBe(true);
-});
+    const fs = require('fs')
+    return fs.existsSync('/tmp/e2e-test.txt')
+  })
+  expect(fileExists).toBe(true)
+})
 
 test('IPC event: main-to-renderer notification', async () => {
   await electronApp.evaluate(async ({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0];
-    win.webContents.send('notification', 'Test title', 'Test body');
-  });
-  await expect(window.locator('.notification-title')).toHaveText('Test title');
-});
+    const win = BrowserWindow.getAllWindows()[0]
+    win.webContents.send('notification', 'Test title', 'Test body')
+  })
+  await expect(window.locator('.notification-title')).toHaveText('Test title')
+})
 ```
 
 ---
@@ -197,21 +202,19 @@ test('IPC event: main-to-renderer notification', async () => {
 
 ```typescript
 test('opening preferences creates a second window', async () => {
-  const windowPromise = electronApp.waitForEvent('window');
-  await window.click('button#preferences');
+  const windowPromise = electronApp.waitForEvent('window')
+  await window.click('button#preferences')
 
-  const prefsWindow = await windowPromise;
-  await prefsWindow.waitForLoadState('domcontentloaded');
-  expect(await prefsWindow.title()).toBe('Preferences');
+  const prefsWindow = await windowPromise
+  await prefsWindow.waitForLoadState('domcontentloaded')
+  expect(await prefsWindow.title()).toBe('Preferences')
 
-  await prefsWindow.check('#dark-mode-toggle');
-  await prefsWindow.click('button#save-prefs');
+  await prefsWindow.check('#dark-mode-toggle')
+  await prefsWindow.click('button#save-prefs')
 
-  const isDark = await window.evaluate(() =>
-    document.documentElement.classList.contains('dark')
-  );
-  expect(isDark).toBe(true);
-});
+  const isDark = await window.evaluate(() => document.documentElement.classList.contains('dark'))
+  expect(isDark).toBe(true)
+})
 ```
 
 ---
@@ -248,14 +251,16 @@ remains the officially recommended tool with broader community support.
 // wdio.conf.ts
 export const config = {
   services: ['electron'],
-  capabilities: [{
-    browserName: 'electron',
-    'wdio:electronServiceOptions': {
-      appBinaryPath: './out/my-app',
-      appArgs: ['--test-mode'],
+  capabilities: [
+    {
+      browserName: 'electron',
+      'wdio:electronServiceOptions': {
+        appBinaryPath: './out/my-app',
+        appArgs: ['--test-mode'],
+      },
     },
-  }],
-};
+  ],
+}
 ```
 
 ---
