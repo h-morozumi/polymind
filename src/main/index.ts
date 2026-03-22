@@ -63,7 +63,7 @@ app.whenReady().then(() => {
   const llmSettingsService = new LlmSettingsService(llmSettingsPath)
 
   registerSystemHandlers()
-  registerChatHandlers()
+  registerChatHandlers(llmSettingsService)
   registerLlmSettingsHandlers(llmSettingsService)
 
   createWindow()

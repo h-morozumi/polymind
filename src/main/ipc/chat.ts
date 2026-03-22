@@ -1,32 +1,101 @@
 import { ipcMain } from 'electron'
+import { streamText } from 'ai'
 import { IpcChannels } from '@shared/ipc'
 import type { IpcResult } from '@shared/ipc'
+import type { ChatSendPayload, ChatStreamEvent } from '@shared/chat'
+import { resolveModel } from '@shared/llm'
+import type { LlmSettingsService } from '../services/llm-settings'
+import { createLanguageModel } from '../services/llm-client'
+import { createAzureEntraTokenProvider } from '../services/azure-auth'
 
 const MAX_MESSAGE_LENGTH = 10_000
 
-export function registerChatHandlers(): void {
+export function registerChatHandlers(llmSettingsService: LlmSettingsService): void {
   ipcMain.handle(
     IpcChannels.CHAT_SEND,
-    async (_event, message: unknown): Promise<IpcResult<string>> => {
-      if (typeof message !== 'string') {
-        return { success: false, error: 'Message must be a string', code: 'INVALID_TYPE' }
+    async (event, payload: unknown): Promise<IpcResult<string>> => {
+      if (!isValidChatPayload(payload)) {
+        return { success: false, error: 'Invalid chat payload', code: 'INVALID_DATA' }
       }
 
-      if (message.length === 0) {
-        return { success: false, error: 'Message cannot be empty', code: 'EMPTY_MESSAGE' }
-      }
-
-      if (message.length > MAX_MESSAGE_LENGTH) {
+      const lastMessage = payload.messages[payload.messages.length - 1]
+      if (lastMessage && lastMessage.content.length > MAX_MESSAGE_LENGTH) {
         return { success: false, error: 'Message is too long', code: 'MESSAGE_TOO_LONG' }
       }
 
+      const settings = llmSettingsService.getSettings()
+      const resolved = resolveModel(settings, payload.model)
+      if (!resolved) {
+        return {
+          success: false,
+          error: 'モデルが見つかりません。プロバイダー設定を確認してください。',
+          code: 'MODEL_NOT_FOUND',
+        }
+      }
+
+      const { provider, model } = resolved
+
       try {
-        await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000))
-        const reply = `You said: "${message}"\n\nThis is a mock response from the main process. AI integration coming soon!`
-        return { success: true, data: reply }
-      } catch {
-        return { success: false, error: 'Failed to process message', code: 'INTERNAL_ERROR' }
+        let azureTokenProvider: (() => Promise<string>) | undefined
+        if (provider.type === 'azure-openai' && provider.azureAuthType === 'entra-id') {
+          azureTokenProvider = createAzureEntraTokenProvider(provider.tenantId)
+        }
+
+        const languageModel = createLanguageModel(provider, model, azureTokenProvider)
+        const webContents = event.sender
+
+        const sendStreamEvent = (e: ChatStreamEvent): void => {
+          if (!webContents.isDestroyed()) {
+            webContents.send(IpcChannels.CHAT_STREAM, e)
+          }
+        }
+
+        const result = streamText({
+          model: languageModel,
+          messages: payload.messages,
+        })
+
+        let fullText = ''
+        for await (const chunk of result.textStream) {
+          fullText += chunk
+          sendStreamEvent({ type: 'text-delta', textDelta: chunk })
+        }
+
+        sendStreamEvent({ type: 'done' })
+        return { success: true, data: fullText }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+
+        const webContents = event.sender
+        if (!webContents.isDestroyed()) {
+          webContents.send(IpcChannels.CHAT_STREAM, {
+            type: 'error',
+            error: errorMessage,
+          } satisfies ChatStreamEvent)
+        }
+
+        return { success: false, error: errorMessage, code: 'LLM_ERROR' }
       }
     },
   )
+}
+
+function isValidChatPayload(value: unknown): value is ChatSendPayload {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
+
+  if (!Array.isArray(obj.messages) || obj.messages.length === 0) return false
+  const validRoles = ['user', 'assistant', 'system']
+  for (const msg of obj.messages) {
+    if (typeof msg !== 'object' || msg === null) return false
+    const m = msg as Record<string, unknown>
+    if (typeof m.role !== 'string' || !validRoles.includes(m.role)) return false
+    if (typeof m.content !== 'string') return false
+  }
+
+  if (typeof obj.model !== 'object' || obj.model === null) return false
+  const model = obj.model as Record<string, unknown>
+  if (typeof model.providerId !== 'string' || typeof model.modelId !== 'string') return false
+
+  return true
 }

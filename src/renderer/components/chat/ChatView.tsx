@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage } from '@renderer/types/chat'
 import type { LlmProvider, ModelSelection } from '@shared/llm'
+import type { ChatCompletionMessage, ChatStreamEvent } from '@shared/chat'
 import { MessageList } from './MessageList'
 import { ChatInput } from './ChatInput'
 import { ProviderSettingsModal } from '../settings/ProviderSettingsModal'
@@ -46,6 +47,17 @@ export function ChatView(): React.JSX.Element {
 
   const handleSend = useCallback(
     async (content: string) => {
+      if (!selectedModel) {
+        const errorMessage: ChatMessage = {
+          id: nextId(),
+          role: 'assistant',
+          content: 'モデルが選択されていません。設定からプロバイダーとモデルを選択してください。',
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        return
+      }
+
       const userMessage: ChatMessage = {
         id: nextId(),
         role: 'user',
@@ -56,34 +68,54 @@ export function ChatView(): React.JSX.Element {
       setMessages((prev) => [...prev, userMessage])
       setIsLoading(true)
 
-      try {
-        const result = await window.api.sendChat(content)
+      const modelLabel = getModelLabel(providers, selectedModel)
+      const assistantId = nextId()
 
-        const modelLabel = getModelLabel(providers, selectedModel)
-        const assistantMessage: ChatMessage = {
-          id: nextId(),
-          role: 'assistant',
-          content: result.success ? result.data : `エラー: ${result.error}`,
-          timestamp: Date.now(),
-          modelId: selectedModel
-            ? `${selectedModel.providerId}/${selectedModel.modelId}`
-            : undefined,
-          modelName: modelLabel ?? undefined,
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        modelId: `${selectedModel.providerId}/${selectedModel.modelId}`,
+        modelName: modelLabel ?? undefined,
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+
+      const cleanupStream = window.api.onChatStream((event: ChatStreamEvent) => {
+        if (event.type === 'text-delta') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + event.textDelta } : m,
+            ),
+          )
         }
-        setMessages((prev) => [...prev, assistantMessage])
+      })
+
+      try {
+        const history = buildHistory([...messages, userMessage])
+        const result = await window.api.sendChat({ messages: history, model: selectedModel })
+
+        if (!result.success) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: `エラー: ${result.error}` } : m,
+            ),
+          )
+        }
       } catch {
-        const errorMessage: ChatMessage = {
-          id: nextId(),
-          role: 'assistant',
-          content: 'エラーが発生しました。もう一度お試しください。',
-          timestamp: Date.now(),
-        }
-        setMessages((prev) => [...prev, errorMessage])
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: 'エラーが発生しました。もう一度お試しください。' }
+              : m,
+          ),
+        )
       } finally {
+        cleanupStream()
         setIsLoading(false)
       }
     },
-    [nextId, providers, selectedModel],
+    [nextId, providers, selectedModel, messages],
   )
 
   return (
@@ -138,4 +170,12 @@ function getModelLabel(providers: LlmProvider[], selection: ModelSelection | nul
   if (!provider) return null
   const model = provider.models.find((m) => m.id === selection.modelId)
   return model?.name ?? null
+}
+
+/** Convert UI messages to LLM completion format */
+function buildHistory(messages: ChatMessage[]): ChatCompletionMessage[] {
+  return messages
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .filter((m) => m.content.length > 0)
+    .map((m) => ({ role: m.role, content: m.content }))
 }
