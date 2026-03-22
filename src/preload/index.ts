@@ -8,6 +8,7 @@ const api = {
   ping: (): Promise<string> => ipcRenderer.invoke(IpcChannels.PING),
   sendChat: (payload: ChatSendPayload): Promise<IpcResult<string>> =>
     ipcRenderer.invoke(IpcChannels.CHAT_SEND, payload),
+  cancelChat: (): Promise<IpcResult<void>> => ipcRenderer.invoke(IpcChannels.CHAT_CANCEL),
   onChatStream: (callback: (event: ChatStreamEvent) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: ChatStreamEvent): void => {
       callback(data)

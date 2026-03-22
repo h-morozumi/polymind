@@ -118,6 +118,10 @@ export function ChatView(): React.JSX.Element {
     [nextId, providers, selectedModel, messages],
   )
 
+  const handleStop = useCallback(async () => {
+    await window.api.cancelChat()
+  }, [])
+
   return (
     <div className="flex h-screen flex-col bg-gray-950">
       <header className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
@@ -145,6 +149,7 @@ export function ChatView(): React.JSX.Element {
       <MessageList messages={messages} isLoading={isLoading} />
       <ChatInput
         onSend={handleSend}
+        onStop={handleStop}
         disabled={isLoading}
         providers={providers}
         selectedModel={selectedModel}

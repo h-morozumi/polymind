@@ -4,12 +4,14 @@ import { ModelSelector } from './ModelSelector'
 
 export function ChatInput({
   onSend,
+  onStop,
   disabled,
   providers,
   selectedModel,
   onModelSelect,
 }: {
   onSend: (message: string) => void
+  onStop: () => void
   disabled: boolean
   providers: LlmProvider[]
   selectedModel: ModelSelection | null
@@ -78,20 +80,42 @@ export function ChatInput({
           rows={1}
           className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 disabled:opacity-50"
         />
-        <button
-          onClick={handleSend}
-          disabled={disabled || !input.trim()}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="h-5 w-5"
+        {disabled ? (
+          <button
+            onClick={onStop}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white transition-colors hover:bg-red-500"
+            aria-label="停止"
           >
-            <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        ) : (
+          <button
+            onClick={handleSend}
+            disabled={!input.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600"
+            aria-label="送信"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-5 w-5"
+            >
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="mx-auto mt-2 max-w-3xl">
         <ModelSelector

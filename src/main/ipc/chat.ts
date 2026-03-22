@@ -10,7 +10,17 @@ import { createAzureEntraTokenProvider } from '../services/azure-auth'
 
 const MAX_MESSAGE_LENGTH = 10_000
 
+let activeAbortController: AbortController | null = null
+
 export function registerChatHandlers(llmSettingsService: LlmSettingsService): void {
+  ipcMain.handle(IpcChannels.CHAT_CANCEL, (): IpcResult<void> => {
+    if (activeAbortController) {
+      activeAbortController.abort()
+      activeAbortController = null
+    }
+    return { success: true, data: undefined }
+  })
+
   ipcMain.handle(
     IpcChannels.CHAT_SEND,
     async (event, payload: unknown): Promise<IpcResult<string>> => {
@@ -35,13 +45,17 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
 
       const { provider, model } = resolved
 
+      if (provider.type === 'azure-openai') {
+        console.log('[Azure OpenAI] apiVersion:', provider.apiVersion, 'baseUrl:', provider.baseUrl)
+      }
+
       try {
         let azureTokenProvider: (() => Promise<string>) | undefined
         if (provider.type === 'azure-openai' && provider.azureAuthType === 'entra-id') {
           azureTokenProvider = createAzureEntraTokenProvider(provider.tenantId)
         }
 
-        const languageModel = createLanguageModel(provider, model, azureTokenProvider)
+        const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
         const webContents = event.sender
 
         const sendStreamEvent = (e: ChatStreamEvent): void => {
@@ -50,20 +64,59 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
           }
         }
 
-        const result = streamText({
-          model: languageModel,
-          messages: payload.messages,
-        })
+        const runStream = async (languageModel: typeof primary): Promise<string> => {
+          const abortController = new AbortController()
+          activeAbortController = abortController
 
-        let fullText = ''
-        for await (const chunk of result.textStream) {
-          fullText += chunk
-          sendStreamEvent({ type: 'text-delta', textDelta: chunk })
+          const result = streamText({
+            model: languageModel,
+            messages: payload.messages,
+            abortSignal: abortController.signal,
+          })
+
+          let fullText = ''
+          for await (const chunk of result.textStream) {
+            fullText += chunk
+            sendStreamEvent({ type: 'text-delta', textDelta: chunk })
+          }
+
+          // Ensure any deferred errors are surfaced
+          await result.response
+          return fullText
         }
 
+        let fullText: string
+        try {
+          fullText = await runStream(primary)
+        } catch (primaryErr) {
+          if (primaryErr instanceof Error && primaryErr.name === 'AbortError') {
+            throw primaryErr
+          }
+          if (fallback) {
+            console.log(
+              '[LLM] Primary API failed, falling back to Chat Completions:',
+              primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
+            )
+            fullText = await runStream(fallback)
+          } else {
+            throw primaryErr
+          }
+        }
+
+        activeAbortController = null
         sendStreamEvent({ type: 'done' })
         return { success: true, data: fullText }
       } catch (err) {
+        activeAbortController = null
+
+        if (err instanceof Error && err.name === 'AbortError') {
+          const webContents = event.sender
+          if (!webContents.isDestroyed()) {
+            webContents.send(IpcChannels.CHAT_STREAM, { type: 'done' } satisfies ChatStreamEvent)
+          }
+          return { success: true, data: '' }
+        }
+
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 
         const webContents = event.sender

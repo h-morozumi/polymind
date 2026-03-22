@@ -21,8 +21,13 @@
     "@ai-sdk/openai": "^3.0.47",
     "@azure/identity": "^4.13.1",
     "ai": "^6.0.134",
+    "highlight.js": "^11.11.1",
+    "mermaid": "^11.13.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1"
   },
   "pnpm": {
     "overrides": {
@@ -33,6 +38,7 @@
   "devDependencies": {
     "@electron-toolkit/utils": "^4.0.0",
     "@eslint/js": "^9.25.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.3",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",

@@ -5,25 +5,40 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import type { LlmProvider, LlmModel } from '@shared/llm'
 
+export interface LanguageModelPair {
+  primary: LanguageModelV1
+  fallback?: LanguageModelV1
+}
+
 /**
- * Creates a Vercel AI SDK LanguageModelV1 from a provider config and model.
- * For Azure Entra ID, the caller must supply a tokenProvider obtained from @azure/identity.
+ * Creates AI SDK LanguageModel(s) from a provider config and model.
+ * For Azure OpenAI, returns both Responses API (primary) and Chat Completions (fallback).
  */
 export function createLanguageModel(
   provider: LlmProvider,
   model: LlmModel,
   azureTokenProvider?: () => Promise<string>,
-): LanguageModelV1 {
+): LanguageModelPair {
   switch (provider.type) {
     case 'openai': {
       const openai = createOpenAI({
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return openai(model.id)
+      return { primary: openai(model.id), fallback: openai.chat(model.id) }
     }
 
     case 'azure-openai': {
+      // v1 endpoint: treat as OpenAI-compatible
+      if (isAzureV1Endpoint(provider.baseUrl)) {
+        const openai = createOpenAI({
+          apiKey: provider.apiKey,
+          baseURL: provider.baseUrl,
+        })
+        return { primary: openai(model.id), fallback: openai.chat(model.id) }
+      }
+
+      // Classic Azure endpoint
       if (provider.azureAuthType === 'entra-id') {
         if (!azureTokenProvider) {
           throw new Error('Azure Entra ID 認証にはトークンプロバイダーが必要です')
@@ -36,14 +51,14 @@ export function createLanguageModel(
             return { Authorization: `Bearer ${token}` }
           },
         })
-        return azure(model.id)
+        return { primary: azure(model.id), fallback: azure.chat(model.id) }
       }
       const azure = createAzure({
         apiKey: provider.apiKey,
         resourceName: extractAzureResourceName(provider.baseUrl),
         apiVersion: provider.apiVersion,
       })
-      return azure(model.id)
+      return { primary: azure(model.id), fallback: azure.chat(model.id) }
     }
 
     case 'claude': {
@@ -51,7 +66,7 @@ export function createLanguageModel(
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return anthropic(model.id)
+      return { primary: anthropic(model.id) }
     }
 
     case 'gemini': {
@@ -59,7 +74,7 @@ export function createLanguageModel(
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return google(model.id)
+      return { primary: google(model.id) }
     }
 
     case 'grok':
@@ -69,12 +84,21 @@ export function createLanguageModel(
         apiKey: provider.apiKey || 'ollama',
         baseURL: provider.baseUrl || undefined,
       })
-      return compat(model.id)
+      return { primary: compat(model.id), fallback: compat.chat(model.id) }
     }
 
     default:
       throw new Error(`Unsupported provider type: ${provider.type}`)
   }
+}
+
+/**
+ * Checks if the Azure endpoint uses the v1 API (OpenAI-compatible, no api-version needed).
+ */
+function isAzureV1Endpoint(baseUrl?: string): boolean {
+  if (!baseUrl) return false
+  const normalized = baseUrl.replace(/\/+$/, '')
+  return normalized.endsWith('/v1') || normalized.endsWith('/openai/v1')
 }
 
 /**

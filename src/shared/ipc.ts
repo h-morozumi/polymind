@@ -2,6 +2,7 @@ export const IpcChannels = {
   PING: 'ping',
   CHAT_SEND: 'chat:send',
   CHAT_STREAM: 'chat:stream',
+  CHAT_CANCEL: 'chat:cancel',
   LLM_GET_SETTINGS: 'llm:get-settings',
   LLM_SAVE_PROVIDER: 'llm:save-provider',
   LLM_DELETE_PROVIDER: 'llm:delete-provider',
