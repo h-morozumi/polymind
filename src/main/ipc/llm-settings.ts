@@ -60,6 +60,11 @@ function isValidProvider(value: unknown): value is LlmProvider {
     typeof obj.type === 'string' &&
     (obj.apiKey === undefined || typeof obj.apiKey === 'string') &&
     (obj.baseUrl === undefined || typeof obj.baseUrl === 'string') &&
+    (obj.azureAuthType === undefined ||
+      obj.azureAuthType === 'api-key' ||
+      obj.azureAuthType === 'entra-id') &&
+    (obj.apiVersion === undefined || typeof obj.apiVersion === 'string') &&
+    (obj.tenantId === undefined || typeof obj.tenantId === 'string') &&
     Array.isArray(obj.models) &&
     obj.models.every(
       (m: unknown) =>

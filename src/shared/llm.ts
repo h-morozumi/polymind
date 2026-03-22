@@ -7,6 +7,10 @@ export type LlmProviderType =
   | 'ollama'
   | 'openai-compatible'
 
+export type AzureAuthType = 'api-key' | 'entra-id'
+
+export const AZURE_DEFAULT_API_VERSION = '2025-01-01-preview'
+
 export interface LlmModel {
   id: string
   name: string
@@ -20,6 +24,12 @@ export interface LlmProvider {
   baseUrl?: string
   models: LlmModel[]
   enabled: boolean
+  /** Azure OpenAI only: authentication method */
+  azureAuthType?: AzureAuthType
+  /** Azure OpenAI only: API version */
+  apiVersion?: string
+  /** Azure OpenAI (Entra ID) only: tenant ID */
+  tenantId?: string
 }
 
 export interface ModelSelection {
@@ -49,7 +59,7 @@ export const PROVIDER_TYPE_META: Record<
   },
   'azure-openai': {
     displayName: 'Azure OpenAI',
-    requiresApiKey: true,
+    requiresApiKey: false,
     requiresBaseUrl: true,
   },
   gemini: {

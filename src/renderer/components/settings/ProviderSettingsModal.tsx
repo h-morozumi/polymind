@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { LlmProvider, LlmProviderType, ModelSelection } from '@shared/llm'
-import { PROVIDER_TYPE_META, PROVIDER_MODEL_DEFAULTS } from '@shared/llm'
+import type { AzureAuthType, LlmProvider, LlmProviderType, ModelSelection } from '@shared/llm'
+import { AZURE_DEFAULT_API_VERSION, PROVIDER_TYPE_META, PROVIDER_MODEL_DEFAULTS } from '@shared/llm'
 
 interface ProviderSettingsModalProps {
   providers: LlmProvider[]
@@ -196,6 +196,11 @@ function ProviderList({
                       )}
                     </div>
                     <p className="truncate text-xs text-gray-500">
+                      {provider.type === 'azure-openai' && (
+                        <span className="mr-1.5">
+                          {provider.azureAuthType === 'entra-id' ? '[Entra ID]' : '[API Key]'}
+                        </span>
+                      )}
                       {provider.models.map((m) => m.name).join(', ') || 'モデル未設定'}
                     </p>
                   </div>
@@ -254,14 +259,19 @@ function ProviderForm({
   const [newModelName, setNewModelName] = useState('')
 
   const meta = PROVIDER_TYPE_META[provider.type]
+  const isAzure = provider.type === 'azure-openai'
 
   const handleTypeChange = useCallback((type: LlmProviderType) => {
     const typeMeta = PROVIDER_TYPE_META[type]
+    const isAzure = type === 'azure-openai'
     setProvider((prev) => ({
       ...prev,
       type,
       baseUrl: typeMeta.defaultBaseUrl ?? prev.baseUrl ?? '',
       models: [...PROVIDER_MODEL_DEFAULTS[type]],
+      azureAuthType: isAzure ? (prev.azureAuthType ?? 'api-key') : undefined,
+      apiVersion: isAzure ? (prev.apiVersion ?? AZURE_DEFAULT_API_VERSION) : undefined,
+      tenantId: isAzure ? prev.tenantId : undefined,
     }))
   }, [])
 
@@ -331,8 +341,31 @@ function ProviderForm({
           />
         </div>
 
+        {/* Azure: Auth Type */}
+        {isAzure && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-400">認証方式</label>
+            <select
+              value={provider.azureAuthType ?? 'api-key'}
+              onChange={(e) => {
+                const authType = e.target.value as AzureAuthType
+                setProvider((prev) => ({
+                  ...prev,
+                  azureAuthType: authType,
+                  apiKey: authType === 'entra-id' ? undefined : prev.apiKey,
+                  tenantId: authType === 'api-key' ? undefined : prev.tenantId,
+                }))
+              }}
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+            >
+              <option value="api-key">API キー</option>
+              <option value="entra-id">Microsoft Entra ID</option>
+            </select>
+          </div>
+        )}
+
         {/* API Key */}
-        {meta.requiresApiKey && (
+        {(meta.requiresApiKey || (isAzure && provider.azureAuthType === 'api-key')) && (
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-400">API キー</label>
             <input
@@ -349,13 +382,51 @@ function ProviderForm({
         {(meta.requiresBaseUrl || provider.baseUrl) && (
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-400">
-              ベース URL {!meta.requiresBaseUrl && '(任意)'}
+              {isAzure ? 'エンドポイント' : 'ベース URL'} {!meta.requiresBaseUrl && '(任意)'}
             </label>
             <input
               type="url"
               value={provider.baseUrl ?? ''}
               onChange={(e) => setProvider((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              placeholder={meta.defaultBaseUrl ?? 'https://...'}
+              placeholder={
+                isAzure
+                  ? 'https://{リソース名}.openai.azure.com/'
+                  : (meta.defaultBaseUrl ?? 'https://...')
+              }
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+            />
+          </div>
+        )}
+
+        {/* Azure: Tenant ID (Entra ID only) */}
+        {isAzure && provider.azureAuthType === 'entra-id' && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-400">
+              テナント ID (任意)
+            </label>
+            <input
+              type="text"
+              value={provider.tenantId ?? ''}
+              onChange={(e) => setProvider((prev) => ({ ...prev, tenantId: e.target.value }))}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+            />
+            <p className="mt-1 text-[11px] text-gray-500">
+              未指定の場合、Azure CLI
+              等の既存認証を試行し、失敗時にブラウザ認証へフォールバックします
+            </p>
+          </div>
+        )}
+
+        {/* Azure: API Version */}
+        {isAzure && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-400">API バージョン</label>
+            <input
+              type="text"
+              value={provider.apiVersion ?? AZURE_DEFAULT_API_VERSION}
+              onChange={(e) => setProvider((prev) => ({ ...prev, apiVersion: e.target.value }))}
+              placeholder={AZURE_DEFAULT_API_VERSION}
               className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
             />
           </div>
@@ -416,7 +487,7 @@ function ProviderForm({
               type="text"
               value={newModelId}
               onChange={(e) => setNewModelId(e.target.value)}
-              placeholder="モデルID (例: gpt-4o)"
+              placeholder={isAzure ? 'デプロイメント名 (例: gpt-4o)' : 'モデルID (例: gpt-4o)'}
               className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 outline-none focus:border-blue-500"
               onKeyDown={(e) => e.key === 'Enter' && handleAddModel()}
             />
