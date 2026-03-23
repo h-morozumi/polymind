@@ -51,13 +51,13 @@ src/
 
 ## Web Search Support
 
-| Provider | Search | Notes |
-|---|---|---|
-| OpenAI | Web | `openai.tools.webSearch` |
-| Azure OpenAI | Web | Responses API models only |
-| Google Gemini | Google Search | `google.tools.googleSearch` |
-| Anthropic Claude | Web | `anthropic.tools.webSearch` |
-| xAI Grok | Web + X | Model auto-selects search type |
+| Provider         | Search        | Notes                          |
+| ---------------- | ------------- | ------------------------------ |
+| OpenAI           | Web           | `openai.tools.webSearch`       |
+| Azure OpenAI     | Web           | Responses API models only      |
+| Google Gemini    | Google Search | `google.tools.googleSearch`    |
+| Anthropic Claude | Web           | `anthropic.tools.webSearch`    |
+| xAI Grok         | Web + X       | Model auto-selects search type |
 
 ## License
 
