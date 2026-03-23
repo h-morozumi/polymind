@@ -5,7 +5,7 @@ This file is read automatically at session start.
 
 ## Project Overview
 
-polymind is a cross-platform desktop client (Windows/macOS) providing chat-based and agent-based AI experiences. It supports extensible multi-agent workflows and external tool/API integrations.
+polymind is a desktop client for Windows and macOS, providing chat-based and agent-based AI experiences. It supports extensible multi-agent workflows and external tool/API integrations.
 
 **Primary language:** TypeScript (strict mode)
 **Desktop shell:** Electron (electron-vite)
@@ -31,8 +31,11 @@ pnpm format                                     # Auto-format with Prettier
 ```
 src/
   main/        # Electron main process (Node.js) — app lifecycle, IPC handlers, native APIs
+    ipc/       #   IPC handler modules (chat, system, llm-settings)
+    services/  #   Backend services (LLM client, settings persistence, Azure auth)
   preload/     # Preload scripts — contextBridge to expose safe APIs to renderer
   renderer/    # React frontend (browser context) — UI components, state management
+    components/#   React components organized by feature (chat/, settings/)
   shared/      # Types, constants, and utilities shared across all processes
 ```
 
