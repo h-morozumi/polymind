@@ -1,4 +1,4 @@
-import type { ModelSelection } from './llm'
+import type { ModelSelection, ToolId } from './llm'
 
 /** Message format sent from renderer to main for LLM completion */
 export interface ChatCompletionMessage {
@@ -10,7 +10,7 @@ export interface ChatCompletionMessage {
 export interface ChatSendPayload {
   messages: ChatCompletionMessage[]
   model: ModelSelection
-  webSearch?: boolean
+  tools?: ToolId[]
 }
 
 /** Source citation returned from web search */
