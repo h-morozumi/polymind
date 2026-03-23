@@ -31,6 +31,22 @@ export function createLanguageModel(
     case 'azure-openai': {
       // v1 endpoint: treat as OpenAI-compatible
       if (isAzureV1Endpoint(provider.baseUrl)) {
+        if (provider.azureAuthType === 'entra-id') {
+          if (!azureTokenProvider) {
+            throw new Error('Azure Entra ID 認証にはトークンプロバイダーが必要です')
+          }
+          const openai = createOpenAI({
+            apiKey: 'entra-id-placeholder',
+            baseURL: provider.baseUrl,
+            fetch: async (url, init) => {
+              const token = await azureTokenProvider()
+              const headers = new Headers(init?.headers as HeadersInit)
+              headers.set('Authorization', `Bearer ${token}`)
+              return globalThis.fetch(url, { ...init, headers })
+            },
+          })
+          return { primary: openai(model.id), fallback: openai.chat(model.id) }
+        }
         const openai = createOpenAI({
           apiKey: provider.apiKey,
           baseURL: provider.baseUrl,

@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { streamText } from 'ai'
 import { IpcChannels } from '@shared/ipc'
 import type { IpcResult } from '@shared/ipc'
@@ -11,6 +11,7 @@ import { createAzureEntraTokenProvider } from '../services/azure-auth'
 const MAX_MESSAGE_LENGTH = 10_000
 
 let activeAbortController: AbortController | null = null
+const tokenProviderCache = new Map<string, () => Promise<string>>()
 
 export function registerChatHandlers(llmSettingsService: LlmSettingsService): void {
   ipcMain.handle(IpcChannels.CHAT_CANCEL, (): IpcResult<void> => {
@@ -50,19 +51,32 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
       }
 
       try {
-        let azureTokenProvider: (() => Promise<string>) | undefined
-        if (provider.type === 'azure-openai' && provider.azureAuthType === 'entra-id') {
-          azureTokenProvider = createAzureEntraTokenProvider(provider.tenantId)
-        }
-
-        const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
         const webContents = event.sender
-
         const sendStreamEvent = (e: ChatStreamEvent): void => {
           if (!webContents.isDestroyed()) {
             webContents.send(IpcChannels.CHAT_STREAM, e)
           }
         }
+
+        let azureTokenProvider: (() => Promise<string>) | undefined
+        if (provider.type === 'azure-openai' && provider.azureAuthType === 'entra-id') {
+          const cacheKey = `${provider.id}:${provider.tenantId ?? ''}`
+          if (!tokenProviderCache.has(cacheKey)) {
+            tokenProviderCache.set(
+              cacheKey,
+              createAzureEntraTokenProvider(provider.tenantId, (info) => {
+                sendStreamEvent({
+                  type: 'text-delta',
+                  textDelta: `🔐 ${info.message}\n\n`,
+                })
+                shell.openExternal(info.verificationUri)
+              }),
+            )
+          }
+          azureTokenProvider = tokenProviderCache.get(cacheKey)
+        }
+
+        const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
 
         const runStream = async (languageModel: typeof primary): Promise<string> => {
           const abortController = new AbortController()
@@ -110,18 +124,18 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
         activeAbortController = null
 
         if (err instanceof Error && err.name === 'AbortError') {
-          const webContents = event.sender
-          if (!webContents.isDestroyed()) {
-            webContents.send(IpcChannels.CHAT_STREAM, { type: 'done' } satisfies ChatStreamEvent)
+          if (!event.sender.isDestroyed()) {
+            event.sender.send(IpcChannels.CHAT_STREAM, {
+              type: 'done',
+            } satisfies ChatStreamEvent)
           }
           return { success: true, data: '' }
         }
 
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
 
-        const webContents = event.sender
-        if (!webContents.isDestroyed()) {
-          webContents.send(IpcChannels.CHAT_STREAM, {
+        if (!event.sender.isDestroyed()) {
+          event.sender.send(IpcChannels.CHAT_STREAM, {
             type: 'error',
             error: errorMessage,
           } satisfies ChatStreamEvent)
