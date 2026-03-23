@@ -20,6 +20,7 @@ export function MermaidDiagram({ chart }: { chart: string }): React.JSX.Element 
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const prevChartRef = useRef('')
+  const hasSvgRef = useRef(false)
 
   useEffect(() => {
     if (chart === prevChartRef.current) return
@@ -34,12 +35,13 @@ export function MermaidDiagram({ chart }: { chart: string }): React.JSX.Element 
         .then(({ svg: rendered }) => {
           if (!cancelled) {
             setSvg(rendered)
+            hasSvgRef.current = true
             setError(null)
           }
         })
         .catch(() => {
           // During streaming, partial content will fail — silently wait
-          if (!cancelled && !svg) {
+          if (!cancelled && !hasSvgRef.current) {
             setError(null)
           }
         })
@@ -50,13 +52,15 @@ export function MermaidDiagram({ chart }: { chart: string }): React.JSX.Element 
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [chart, svg])
+  }, [chart])
 
   if (svg) {
     return (
       <div
         ref={containerRef}
         className="my-2 flex justify-center overflow-x-auto"
+        role="img"
+        aria-label="Mermaid ダイアグラム"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     )
@@ -68,5 +72,5 @@ export function MermaidDiagram({ chart }: { chart: string }): React.JSX.Element 
     )
   }
 
-  return <div className="py-4 text-center text-xs text-gray-500">図を描画中...</div>
+  return <div className="py-4 text-center text-xs text-gray-500">図を描画中…</div>
 }

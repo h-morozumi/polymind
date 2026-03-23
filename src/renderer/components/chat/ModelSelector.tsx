@@ -25,7 +25,10 @@ export function ModelSelector({
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const enabledProviders = providers.filter((p) => p.enabled && p.models.length > 0)
+  const enabledProviders = useMemo(
+    () => providers.filter((p) => p.enabled && p.models.length > 0),
+    [providers],
+  )
 
   const flatItems = useMemo<FlatModelItem[]>(
     () =>
@@ -189,6 +192,7 @@ function ModelIcon(): React.JSX.Element {
       viewBox="0 0 20 20"
       fill="currentColor"
       className="h-3.5 w-3.5"
+      aria-hidden="true"
     >
       <path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06ZM14.95 3.05a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0ZM3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8ZM14 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8ZM7.172 13.828a.75.75 0 0 1-1.061-1.06l1.06-1.062a.75.75 0 0 1 1.062 1.061l-1.06 1.06ZM10 18a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 1.5 0v1.5A.75.75 0 0 1 10 18ZM12.828 13.828a.75.75 0 0 1 0-1.06l1.061-1.062a.75.75 0 1 1 1.06 1.061l-1.06 1.06a.75.75 0 0 1-1.06 0ZM10 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
     </svg>
@@ -202,6 +206,7 @@ function ChevronIcon({ isOpen }: { isOpen: boolean }): React.JSX.Element {
       viewBox="0 0 16 16"
       fill="currentColor"
       className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+      aria-hidden="true"
     >
       <path
         fillRule="evenodd"

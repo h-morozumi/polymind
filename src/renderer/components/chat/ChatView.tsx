@@ -14,17 +14,17 @@ export function ChatView(): React.JSX.Element {
   const [showSettings, setShowSettings] = useState(false)
   const messageIdRef = useRef(0)
 
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
-  const loadSettings = async (): Promise<void> => {
+  const loadSettings = useCallback(async (): Promise<void> => {
     const result = await window.api.getLlmSettings()
     if (result.success) {
       setProviders(result.data.providers)
       setSelectedModel(result.data.lastUsedModel)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
 
   const nextId = useCallback((): string => {
     return `msg-${++messageIdRef.current}-${Date.now()}`
@@ -35,15 +35,21 @@ export function ChatView(): React.JSX.Element {
     await window.api.setLastUsedModel(selection)
   }, [])
 
-  const handleSaveProvider = useCallback(async (provider: LlmProvider) => {
-    await window.api.saveLlmProvider(provider)
-    await loadSettings()
-  }, [])
+  const handleSaveProvider = useCallback(
+    async (provider: LlmProvider) => {
+      await window.api.saveLlmProvider(provider)
+      await loadSettings()
+    },
+    [loadSettings],
+  )
 
-  const handleDeleteProvider = useCallback(async (id: string) => {
-    await window.api.deleteLlmProvider(id)
-    await loadSettings()
-  }, [])
+  const handleDeleteProvider = useCallback(
+    async (id: string) => {
+      await window.api.deleteLlmProvider(id)
+      await loadSettings()
+    },
+    [loadSettings],
+  )
 
   const handleSend = useCallback(
     async (content: string) => {
@@ -130,13 +136,14 @@ export function ChatView(): React.JSX.Element {
           type="button"
           onClick={() => setShowSettings(true)}
           className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
-          title="LLM プロバイダー設定"
+          aria-label="LLM プロバイダー設定"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
             className="h-5 w-5"
+            aria-hidden="true"
           >
             <path
               fillRule="evenodd"

@@ -75,10 +75,12 @@ export function ChatInput({
             adjustHeight()
           }}
           onKeyDown={handleKeyDown}
-          placeholder="メッセージを入力..."
+          placeholder="メッセージを入力…"
+          name="chat-message"
+          autoComplete="off"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 disabled:opacity-50"
+          className="flex-1 resize-none rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50"
         />
         {disabled ? (
           <button

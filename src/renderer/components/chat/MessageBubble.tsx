@@ -45,7 +45,7 @@ export const MessageBubble = memo(function MessageBubble({
         >
           {isUser ? 'You' : 'AI'}
         </div>
-        <div>
+        <div className="min-w-0">
           <div
             className={`rounded-2xl px-4 py-2.5 ${
               isUser ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-100'

@@ -182,7 +182,7 @@ function ProviderList({
                     className={`h-2.5 w-2.5 rounded-full ${
                       provider.enabled ? 'bg-green-500' : 'bg-gray-600'
                     }`}
-                    aria-label={provider.enabled ? '有効' : '無効'}
+                    aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -315,11 +315,14 @@ function ProviderForm({
       <div className="max-h-[60vh] space-y-4 overflow-y-auto px-5 py-4">
         {/* Provider Type */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-400">タイプ</label>
+          <label htmlFor="provider-type" className="mb-1 block text-xs font-medium text-gray-400">
+            タイプ
+          </label>
           <select
+            id="provider-type"
             value={provider.type}
             onChange={(e) => handleTypeChange(e.target.value as LlmProviderType)}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
           >
             {(Object.keys(PROVIDER_TYPE_META) as LlmProviderType[]).map((type) => (
               <option key={type} value={type}>
@@ -331,21 +334,30 @@ function ProviderForm({
 
         {/* Name */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-400">表示名</label>
+          <label htmlFor="provider-name" className="mb-1 block text-xs font-medium text-gray-400">
+            表示名
+          </label>
           <input
+            id="provider-name"
             type="text"
             value={provider.name}
             onChange={(e) => setProvider((prev) => ({ ...prev, name: e.target.value }))}
             placeholder={meta.displayName}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
           />
         </div>
 
         {/* Azure: Auth Type */}
         {isAzure && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">認証方式</label>
+            <label
+              htmlFor="provider-auth-type"
+              className="mb-1 block text-xs font-medium text-gray-400"
+            >
+              認証方式
+            </label>
             <select
+              id="provider-auth-type"
               value={provider.azureAuthType ?? 'api-key'}
               onChange={(e) => {
                 const authType = e.target.value as AzureAuthType
@@ -356,7 +368,7 @@ function ProviderForm({
                   tenantId: authType === 'api-key' ? undefined : prev.tenantId,
                 }))
               }}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
               <option value="api-key">API キー</option>
               <option value="entra-id">Microsoft Entra ID</option>
@@ -367,13 +379,19 @@ function ProviderForm({
         {/* API Key */}
         {(meta.requiresApiKey || (isAzure && provider.azureAuthType === 'api-key')) && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">API キー</label>
+            <label
+              htmlFor="provider-api-key"
+              className="mb-1 block text-xs font-medium text-gray-400"
+            >
+              API キー
+            </label>
             <input
+              id="provider-api-key"
               type="password"
               value={provider.apiKey ?? ''}
               onChange={(e) => setProvider((prev) => ({ ...prev, apiKey: e.target.value }))}
-              placeholder="sk-..."
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              placeholder="sk-…"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             />
           </div>
         )}
@@ -381,19 +399,23 @@ function ProviderForm({
         {/* Base URL */}
         {(meta.requiresBaseUrl || provider.baseUrl) && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">
+            <label
+              htmlFor="provider-base-url"
+              className="mb-1 block text-xs font-medium text-gray-400"
+            >
               {isAzure ? 'エンドポイント' : 'ベース URL'} {!meta.requiresBaseUrl && '(任意)'}
             </label>
             <input
+              id="provider-base-url"
               type="url"
               value={provider.baseUrl ?? ''}
               onChange={(e) => setProvider((prev) => ({ ...prev, baseUrl: e.target.value }))}
               placeholder={
                 isAzure
                   ? 'https://{リソース名}.openai.azure.com/'
-                  : (meta.defaultBaseUrl ?? 'https://...')
+                  : (meta.defaultBaseUrl ?? 'https://…')
               }
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             />
           </div>
         )}
@@ -401,15 +423,19 @@ function ProviderForm({
         {/* Azure: Tenant ID (Entra ID only) */}
         {isAzure && provider.azureAuthType === 'entra-id' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">
+            <label
+              htmlFor="provider-tenant-id"
+              className="mb-1 block text-xs font-medium text-gray-400"
+            >
               テナント ID (任意)
             </label>
             <input
+              id="provider-tenant-id"
               type="text"
               value={provider.tenantId ?? ''}
               onChange={(e) => setProvider((prev) => ({ ...prev, tenantId: e.target.value }))}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             />
             <p className="mt-1 text-[11px] text-gray-500">
               未指定の場合、Azure CLI
@@ -421,13 +447,19 @@ function ProviderForm({
         {/* Azure: API Version */}
         {isAzure && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-400">API バージョン</label>
+            <label
+              htmlFor="provider-api-version"
+              className="mb-1 block text-xs font-medium text-gray-400"
+            >
+              API バージョン
+            </label>
             <input
+              id="provider-api-version"
               type="text"
               value={provider.apiVersion ?? AZURE_DEFAULT_API_VERSION}
               onChange={(e) => setProvider((prev) => ({ ...prev, apiVersion: e.target.value }))}
               placeholder={AZURE_DEFAULT_API_VERSION}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
             />
           </div>
         )}
@@ -488,7 +520,8 @@ function ProviderForm({
               value={newModelId}
               onChange={(e) => setNewModelId(e.target.value)}
               placeholder={isAzure ? 'デプロイメント名 (例: gpt-4o)' : 'モデルID (例: gpt-4o)'}
-              className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              aria-label={isAzure ? 'デプロイメント名' : 'モデルID'}
+              className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
               onKeyDown={(e) => e.key === 'Enter' && handleAddModel()}
             />
             <input
@@ -496,7 +529,8 @@ function ProviderForm({
               value={newModelName}
               onChange={(e) => setNewModelName(e.target.value)}
               placeholder="表示名 (任意)"
-              className="w-28 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 outline-none focus:border-blue-500"
+              aria-label="モデル表示名"
+              className="w-28 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-xs text-white placeholder-gray-500 outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/40"
               onKeyDown={(e) => e.key === 'Enter' && handleAddModel()}
             />
             <button
@@ -539,6 +573,7 @@ function CloseIcon(): React.JSX.Element {
       viewBox="0 0 20 20"
       fill="currentColor"
       className="h-4 w-4"
+      aria-hidden="true"
     >
       <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
     </svg>
@@ -552,6 +587,7 @@ function EditIcon(): React.JSX.Element {
       viewBox="0 0 16 16"
       fill="currentColor"
       className="h-3.5 w-3.5"
+      aria-hidden="true"
     >
       <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474Z" />
       <path d="M4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9A.75.75 0 0 1 14 9v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
@@ -566,6 +602,7 @@ function TrashIcon(): React.JSX.Element {
       viewBox="0 0 16 16"
       fill="currentColor"
       className="h-3.5 w-3.5"
+      aria-hidden="true"
     >
       <path
         fillRule="evenodd"
@@ -583,6 +620,7 @@ function PlusIcon(): React.JSX.Element {
       viewBox="0 0 16 16"
       fill="currentColor"
       className="h-4 w-4"
+      aria-hidden="true"
     >
       <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
     </svg>
