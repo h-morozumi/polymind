@@ -5,7 +5,7 @@ import type { IpcResult } from '@shared/ipc'
 import type { ChatSendPayload, ChatStreamEvent } from '@shared/chat'
 import { resolveModel } from '@shared/llm'
 import type { LlmSettingsService } from '../services/llm-settings'
-import { createLanguageModel } from '../services/llm-client'
+import { createLanguageModel, createWebSearchTools } from '../services/llm-client'
 import { createAzureEntraTokenProvider } from '../services/azure-auth'
 
 const MAX_MESSAGE_LENGTH = 10_000
@@ -78,6 +78,8 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
 
         const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
 
+        const webSearchTools = payload.webSearch ? createWebSearchTools(provider) : undefined
+
         const runStream = async (languageModel: typeof primary): Promise<string> => {
           const abortController = new AbortController()
           activeAbortController = abortController
@@ -86,6 +88,7 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
             model: languageModel,
             messages: payload.messages,
             abortSignal: abortController.signal,
+            ...(webSearchTools ? { tools: webSearchTools } : {}),
           })
 
           let fullText = ''
@@ -95,13 +98,27 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
           }
 
           // Ensure any deferred errors are surfaced
-          await result.response
-          return fullText
+          const response = await result.response
+
+          // Extract sources from provider metadata (if web search was used)
+          const sources = response.sources
+            ?.map((s) => {
+              if ('url' in s) {
+                return {
+                  url: s.url,
+                  title: ('title' in s ? s.title : undefined) as string | undefined,
+                }
+              }
+              return null
+            })
+            .filter((s): s is { url: string; title?: string } => s !== null)
+
+          return JSON.stringify({ fullText, sources })
         }
 
-        let fullText: string
+        let resultJson: string
         try {
-          fullText = await runStream(primary)
+          resultJson = await runStream(primary)
         } catch (primaryErr) {
           if (primaryErr instanceof Error && primaryErr.name === 'AbortError') {
             throw primaryErr
@@ -111,15 +128,23 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
               '[LLM] Primary API failed, falling back to Chat Completions:',
               primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
             )
-            fullText = await runStream(fallback)
+            resultJson = await runStream(fallback)
           } else {
             throw primaryErr
           }
         }
 
         activeAbortController = null
-        sendStreamEvent({ type: 'done' })
-        return { success: true, data: fullText }
+
+        const parsed = JSON.parse(resultJson) as {
+          fullText: string
+          sources?: { url: string; title?: string }[]
+        }
+        sendStreamEvent({
+          type: 'done',
+          sources: parsed.sources?.length ? parsed.sources : undefined,
+        })
+        return { success: true, data: parsed.fullText }
       } catch (err) {
         activeAbortController = null
 
@@ -163,6 +188,8 @@ function isValidChatPayload(value: unknown): value is ChatSendPayload {
   if (typeof obj.model !== 'object' || obj.model === null) return false
   const model = obj.model as Record<string, unknown>
   if (typeof model.providerId !== 'string' || typeof model.modelId !== 'string') return false
+
+  if ('webSearch' in obj && typeof obj.webSearch !== 'boolean') return false
 
   return true
 }

@@ -49,6 +49,7 @@ export const PROVIDER_TYPE_META: Record<
     requiresApiKey: boolean
     requiresBaseUrl: boolean
     defaultBaseUrl?: string
+    supportsNativeWebSearch: boolean
   }
 > = {
   openai: {
@@ -56,40 +57,47 @@ export const PROVIDER_TYPE_META: Record<
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.openai.com/v1',
+    supportsNativeWebSearch: true,
   },
   'azure-openai': {
     displayName: 'Azure OpenAI',
     requiresApiKey: false,
     requiresBaseUrl: true,
+    supportsNativeWebSearch: false,
   },
   gemini: {
     displayName: 'Google Gemini',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    supportsNativeWebSearch: true,
   },
   claude: {
     displayName: 'Anthropic Claude',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.anthropic.com/v1',
+    supportsNativeWebSearch: true,
   },
   grok: {
     displayName: 'xAI Grok',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.x.ai/v1',
+    supportsNativeWebSearch: false,
   },
   ollama: {
     displayName: 'Ollama (ローカル)',
     requiresApiKey: false,
     requiresBaseUrl: true,
     defaultBaseUrl: 'http://localhost:11434',
+    supportsNativeWebSearch: false,
   },
   'openai-compatible': {
     displayName: 'OpenAI互換',
     requiresApiKey: false,
     requiresBaseUrl: true,
+    supportsNativeWebSearch: false,
   },
 }
 

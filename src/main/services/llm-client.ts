@@ -1,4 +1,4 @@
-import type { LanguageModelV1 } from 'ai'
+import type { LanguageModelV1, ToolSet } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAzure } from '@ai-sdk/azure'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -129,5 +129,40 @@ function extractAzureResourceName(baseUrl?: string): string | undefined {
     return match ? match[1] : undefined
   } catch {
     return undefined
+  }
+}
+
+/**
+ * Creates provider-native web search tools for use with streamText().
+ * Returns undefined if the provider does not support native web search.
+ */
+export function createWebSearchTools(provider: LlmProvider): ToolSet | undefined {
+  switch (provider.type) {
+    case 'openai': {
+      const openai = createOpenAI({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseUrl || undefined,
+      })
+      return { web_search: openai.tools.webSearch() }
+    }
+
+    case 'claude': {
+      const anthropic = createAnthropic({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseUrl || undefined,
+      })
+      return { web_search: anthropic.tools.webSearch_20250305() }
+    }
+
+    case 'gemini': {
+      const google = createGoogleGenerativeAI({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseUrl || undefined,
+      })
+      return { google_search: google.tools.googleSearch() }
+    }
+
+    default:
+      return undefined
   }
 }
