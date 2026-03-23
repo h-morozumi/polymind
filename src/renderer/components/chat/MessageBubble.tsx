@@ -26,7 +26,24 @@ function CodeBlock(props: ComponentProps<'code'>): React.JSX.Element {
   )
 }
 
-const markdownComponents = { code: CodeBlock }
+function ExternalLink(props: ComponentProps<'a'> & { href?: string }): React.JSX.Element {
+  const { href, children, ...rest } = props
+  return (
+    <a
+      {...rest}
+      href={href}
+      onClick={(e) => {
+        e.preventDefault()
+        if (href) window.api.openExternal(href)
+      }}
+      className="text-blue-400 underline hover:text-blue-300"
+    >
+      {children}
+    </a>
+  )
+}
+
+const markdownComponents = { code: CodeBlock, a: ExternalLink }
 
 export const MessageBubble = memo(function MessageBubble({
   message,

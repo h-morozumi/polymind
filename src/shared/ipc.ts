@@ -7,6 +7,7 @@ export const IpcChannels = {
   LLM_SAVE_PROVIDER: 'llm:save-provider',
   LLM_DELETE_PROVIDER: 'llm:delete-provider',
   LLM_SET_LAST_USED: 'llm:set-last-used',
+  OPEN_EXTERNAL: 'shell:open-external',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

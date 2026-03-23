@@ -4,11 +4,14 @@ Desktop client for chat-based and agent-based AI experiences. Built with Electro
 
 ## Features
 
-- **Multi-provider LLM support** — OpenAI, Azure OpenAI, Anthropic Claude, Google Gemini, Grok, Ollama, and OpenAI-compatible endpoints
+- **Multi-provider LLM support** — OpenAI, Azure OpenAI, Anthropic Claude, Google Gemini, xAI Grok, Ollama, and OpenAI-compatible endpoints
 - **Streaming chat** — Real-time token streaming via Vercel AI SDK
+- **Web search** — Provider-native web search toggle (OpenAI, Azure OpenAI, Gemini, Claude, Grok)
+- **X (Twitter) search** — Grok models can search X posts in real-time
 - **Rich rendering** — Markdown (GFM), syntax highlighting, and Mermaid diagrams
 - **Azure Entra ID authentication** — Token-based auth with persistent cache for Azure OpenAI
 - **Provider management** — Add, configure, and switch between multiple LLM providers and models
+- **External links** — URLs in responses open in the system browser
 
 ## Tech Stack
 
@@ -45,6 +48,16 @@ src/
   renderer/    # React frontend — chat UI, settings, components
   shared/      # Shared types, IPC channel definitions, and constants
 ```
+
+## Web Search Support
+
+| Provider | Search | Notes |
+|---|---|---|
+| OpenAI | Web | `openai.tools.webSearch` |
+| Azure OpenAI | Web | Responses API models only |
+| Google Gemini | Google Search | `google.tools.googleSearch` |
+| Anthropic Claude | Web | `anthropic.tools.webSearch` |
+| xAI Grok | Web + X | Model auto-selects search type |
 
 ## License
 

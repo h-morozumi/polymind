@@ -19,6 +19,7 @@
     "@ai-sdk/azure": "^3.0.48",
     "@ai-sdk/google": "^3.0.52",
     "@ai-sdk/openai": "^3.0.47",
+    "@ai-sdk/xai": "^3.0.73",
     "@azure/identity": "^4.13.1",
     "ai": "^6.0.134",
     "highlight.js": "^11.11.1",

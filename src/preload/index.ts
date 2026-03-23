@@ -26,6 +26,7 @@ const api = {
     ipcRenderer.invoke(IpcChannels.LLM_DELETE_PROVIDER, id),
   setLastUsedModel: (selection: ModelSelection | null): Promise<IpcResult<void>> =>
     ipcRenderer.invoke(IpcChannels.LLM_SET_LAST_USED, selection),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IpcChannels.OPEN_EXTERNAL, url),
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -12,6 +12,7 @@ export function ChatView(): React.JSX.Element {
   const [providers, setProviders] = useState<LlmProvider[]>([])
   const [selectedModel, setSelectedModel] = useState<ModelSelection | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
   const messageIdRef = useRef(0)
 
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -99,7 +100,11 @@ export function ChatView(): React.JSX.Element {
 
       try {
         const history = buildHistory([...messages, userMessage])
-        const result = await window.api.sendChat({ messages: history, model: selectedModel })
+        const result = await window.api.sendChat({
+          messages: history,
+          model: selectedModel,
+          webSearch: webSearchEnabled,
+        })
 
         if (!result.success) {
           setMessages((prev) =>
@@ -121,7 +126,7 @@ export function ChatView(): React.JSX.Element {
         setIsLoading(false)
       }
     },
-    [nextId, providers, selectedModel, messages],
+    [nextId, providers, selectedModel, messages, webSearchEnabled],
   )
 
   const handleStop = useCallback(async () => {
@@ -161,6 +166,8 @@ export function ChatView(): React.JSX.Element {
         providers={providers}
         selectedModel={selectedModel}
         onModelSelect={handleModelSelect}
+        webSearchEnabled={webSearchEnabled}
+        onWebSearchToggle={setWebSearchEnabled}
       />
 
       {showSettings && (
