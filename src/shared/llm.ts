@@ -63,7 +63,7 @@ export const PROVIDER_TYPE_META: Record<
     displayName: 'Azure OpenAI',
     requiresApiKey: false,
     requiresBaseUrl: true,
-    supportsNativeWebSearch: false,
+    supportsNativeWebSearch: true,
   },
   gemini: {
     displayName: 'Google Gemini',
@@ -84,7 +84,7 @@ export const PROVIDER_TYPE_META: Record<
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.x.ai/v1',
-    supportsNativeWebSearch: false,
+    supportsNativeWebSearch: true,
   },
   ollama: {
     displayName: 'Ollama (ローカル)',

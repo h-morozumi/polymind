@@ -1,6 +1,12 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { IpcChannels } from '@shared/ipc'
 
 export function registerSystemHandlers(): void {
   ipcMain.handle(IpcChannels.PING, () => 'pong')
+
+  ipcMain.handle(IpcChannels.OPEN_EXTERNAL, (_event, url: string) => {
+    if (typeof url === 'string' && /^https?:\/\//.test(url)) {
+      shell.openExternal(url)
+    }
+  })
 }

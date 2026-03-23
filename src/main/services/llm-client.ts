@@ -3,6 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAzure } from '@ai-sdk/azure'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createXai } from '@ai-sdk/xai'
 import type { LlmProvider, LlmModel } from '@shared/llm'
 
 export interface LanguageModelPair {
@@ -93,7 +94,14 @@ export function createLanguageModel(
       return { primary: google(model.id) }
     }
 
-    case 'grok':
+    case 'grok': {
+      const xai = createXai({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseUrl || undefined,
+      })
+      return { primary: xai.responses(model.id), fallback: xai.chat(model.id) }
+    }
+
     case 'ollama':
     case 'openai-compatible': {
       const compat = createOpenAI({
@@ -136,14 +144,58 @@ function extractAzureResourceName(baseUrl?: string): string | undefined {
  * Creates provider-native web search tools for use with streamText().
  * Returns undefined if the provider does not support native web search.
  */
-export function createWebSearchTools(provider: LlmProvider): ToolSet | undefined {
+export function createWebSearchTools(
+  provider: LlmProvider,
+  azureTokenProvider?: () => Promise<string>,
+): ToolSet | undefined {
   switch (provider.type) {
     case 'openai': {
       const openai = createOpenAI({
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return { web_search: openai.tools.webSearch() }
+      return { web_search: openai.tools.webSearch({}) }
+    }
+
+    case 'azure-openai': {
+      if (isAzureV1Endpoint(provider.baseUrl)) {
+        if (provider.azureAuthType === 'entra-id' && azureTokenProvider) {
+          const openai = createOpenAI({
+            apiKey: 'entra-id-placeholder',
+            baseURL: provider.baseUrl,
+            fetch: async (url, init) => {
+              const token = await azureTokenProvider()
+              const headers = new Headers(init?.headers as HeadersInit)
+              headers.set('Authorization', `Bearer ${token}`)
+              return globalThis.fetch(url, { ...init, headers })
+            },
+          })
+          return { web_search: openai.tools.webSearch({}) }
+        }
+        const openai = createOpenAI({
+          apiKey: provider.apiKey,
+          baseURL: provider.baseUrl,
+        })
+        return { web_search: openai.tools.webSearch({}) }
+      }
+      // Classic Azure endpoint — uses webSearchPreview
+      if (provider.azureAuthType === 'entra-id' && azureTokenProvider) {
+        const azure = createAzure({
+          resourceName: extractAzureResourceName(provider.baseUrl),
+          apiVersion: provider.apiVersion,
+          headers: async () => {
+            const token = await azureTokenProvider()
+            return { Authorization: `Bearer ${token}` }
+          },
+        })
+        return { web_search: azure.tools.webSearchPreview({}) }
+      }
+      const azure = createAzure({
+        apiKey: provider.apiKey,
+        resourceName: extractAzureResourceName(provider.baseUrl),
+        apiVersion: provider.apiVersion,
+      })
+      return { web_search: azure.tools.webSearchPreview({}) }
     }
 
     case 'claude': {
@@ -151,7 +203,7 @@ export function createWebSearchTools(provider: LlmProvider): ToolSet | undefined
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return { web_search: anthropic.tools.webSearch_20250305() }
+      return { web_search: anthropic.tools.webSearch_20250305({}) }
     }
 
     case 'gemini': {
@@ -159,7 +211,18 @@ export function createWebSearchTools(provider: LlmProvider): ToolSet | undefined
         apiKey: provider.apiKey,
         baseURL: provider.baseUrl || undefined,
       })
-      return { google_search: google.tools.googleSearch() }
+      return { google_search: google.tools.googleSearch({}) }
+    }
+
+    case 'grok': {
+      const xai = createXai({
+        apiKey: provider.apiKey,
+        baseURL: provider.baseUrl || undefined,
+      })
+      return {
+        web_search: xai.tools.webSearch({}),
+        x_search: xai.tools.xSearch({}),
+      }
     }
 
     default:

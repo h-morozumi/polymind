@@ -78,7 +78,9 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
 
         const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
 
-        const webSearchTools = payload.webSearch ? createWebSearchTools(provider) : undefined
+        const webSearchTools = payload.webSearch
+          ? createWebSearchTools(provider, azureTokenProvider)
+          : undefined
 
         const runStream = async (languageModel: typeof primary): Promise<string> => {
           const abortController = new AbortController()
@@ -124,6 +126,16 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
             throw primaryErr
           }
           if (fallback) {
+            if (webSearchTools) {
+              // Web search tools are only supported on the Responses API.
+              // Return a user-friendly message instead of falling back without search.
+              const msg =
+                'このモデルではWeb検索は利用できません。Web検索をオフにしてお試しください。'
+              sendStreamEvent({ type: 'text-delta', textDelta: msg })
+              sendStreamEvent({ type: 'done' })
+              activeAbortController = null
+              return { success: true, data: msg }
+            }
             console.log(
               '[LLM] Primary API failed, falling back to Chat Completions:',
               primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
