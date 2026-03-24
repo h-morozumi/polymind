@@ -114,9 +114,17 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
                 args: argsStr,
               })
             } else if (part.type === 'tool-result') {
-              const resultStr = part.result ? String(part.result).substring(0, 200) : ''
-              console.log(`[Tool] result: ${part.toolName}`, resultStr)
+              console.log(`[Tool] result: ${part.toolName}`)
               sendStreamEvent({ type: 'tool-result', toolName: part.toolName })
+              // Extract image data from image generation tool results
+              const output = (part as { output?: { result?: string } }).output
+              if (part.toolName === 'image_generation' && output?.result) {
+                sendStreamEvent({
+                  type: 'image',
+                  base64: output.result,
+                  mimeType: 'image/png',
+                })
+              }
             }
           }
 
