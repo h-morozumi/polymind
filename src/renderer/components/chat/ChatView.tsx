@@ -128,6 +128,20 @@ export function ChatView(): React.JSX.Element {
                 : m,
             ),
           )
+        } else if (event.type === 'image') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    images: [
+                      ...(m.images ?? []),
+                      { base64: event.base64, mimeType: event.mimeType },
+                    ],
+                  }
+                : m,
+            ),
+          )
         }
       })
 

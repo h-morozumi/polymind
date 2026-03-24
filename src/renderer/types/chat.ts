@@ -13,4 +13,5 @@ export interface ChatMessage {
   modelId?: string
   modelName?: string
   toolStatuses?: ToolStatus[]
+  images?: { base64: string; mimeType: string }[]
 }

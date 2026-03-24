@@ -24,5 +24,6 @@ export type ChatStreamEvent =
   | { type: 'text-delta'; textDelta: string }
   | { type: 'tool-call'; toolName: string; args: string }
   | { type: 'tool-result'; toolName: string }
+  | { type: 'image'; base64: string; mimeType: string }
   | { type: 'done'; sources?: ChatSource[] }
   | { type: 'error'; error: string }

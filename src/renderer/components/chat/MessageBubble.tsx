@@ -88,15 +88,30 @@ export const MessageBubble = memo(function MessageBubble({
             {isUser ? (
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
             ) : (
-              <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                  components={markdownComponents}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              </div>
+              <>
+                {message.images && message.images.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {message.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={`data:${img.mimeType};base64,${img.base64}`}
+                        alt="Generated image"
+                        className="max-w-full rounded-lg"
+                        style={{ maxHeight: '400px' }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={markdownComponents}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              </>
             )}
           </div>
           <div
