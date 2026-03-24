@@ -22,5 +22,7 @@ export interface ChatSource {
 /** Streaming chunk sent from main to renderer */
 export type ChatStreamEvent =
   | { type: 'text-delta'; textDelta: string }
+  | { type: 'tool-call'; toolName: string; args: string }
+  | { type: 'tool-result'; toolName: string }
   | { type: 'done'; sources?: ChatSource[] }
   | { type: 'error'; error: string }

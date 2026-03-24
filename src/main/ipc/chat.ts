@@ -95,9 +95,29 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
           })
 
           let fullText = ''
-          for await (const chunk of result.textStream) {
-            fullText += chunk
-            sendStreamEvent({ type: 'text-delta', textDelta: chunk })
+          for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+              const delta =
+                (part as { textDelta?: string; text?: string }).textDelta ??
+                (part as { text?: string }).text ??
+                ''
+              if (delta) {
+                fullText += delta
+                sendStreamEvent({ type: 'text-delta', textDelta: delta })
+              }
+            } else if (part.type === 'tool-call') {
+              const argsStr = part.args ? JSON.stringify(part.args).substring(0, 200) : ''
+              console.log(`[Tool] called: ${part.toolName}`, argsStr)
+              sendStreamEvent({
+                type: 'tool-call',
+                toolName: part.toolName,
+                args: argsStr,
+              })
+            } else if (part.type === 'tool-result') {
+              const resultStr = part.result ? String(part.result).substring(0, 200) : ''
+              console.log(`[Tool] result: ${part.toolName}`, resultStr)
+              sendStreamEvent({ type: 'tool-result', toolName: part.toolName })
+            }
           }
 
           // Ensure any deferred errors are surfaced
@@ -128,6 +148,10 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
           }
           if (fallback) {
             if (providerTools) {
+              console.log(
+                '[LLM] Primary API failed with tools enabled:',
+                primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
+              )
               // Web search tools are only supported on the Responses API.
               // Return a user-friendly message instead of falling back without search.
               const msg =

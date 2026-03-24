@@ -101,6 +101,33 @@ export function ChatView(): React.JSX.Element {
               m.id === assistantId ? { ...m, content: m.content + event.textDelta } : m,
             ),
           )
+        } else if (event.type === 'tool-call') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    toolStatuses: [
+                      ...(m.toolStatuses ?? []),
+                      { toolName: event.toolName, status: 'calling' as const },
+                    ],
+                  }
+                : m,
+            ),
+          )
+        } else if (event.type === 'tool-result') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    toolStatuses: (m.toolStatuses ?? []).map((ts) =>
+                      ts.toolName === event.toolName ? { ...ts, status: 'done' as const } : ts,
+                    ),
+                  }
+                : m,
+            ),
+          )
         }
       })
 
