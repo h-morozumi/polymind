@@ -1,4 +1,4 @@
-import type { ModelSelection } from './llm'
+import type { ModelSelection, ToolId } from './llm'
 
 /** Message format sent from renderer to main for LLM completion */
 export interface ChatCompletionMessage {
@@ -10,7 +10,7 @@ export interface ChatCompletionMessage {
 export interface ChatSendPayload {
   messages: ChatCompletionMessage[]
   model: ModelSelection
-  webSearch?: boolean
+  tools?: ToolId[]
 }
 
 /** Source citation returned from web search */
@@ -22,5 +22,7 @@ export interface ChatSource {
 /** Streaming chunk sent from main to renderer */
 export type ChatStreamEvent =
   | { type: 'text-delta'; textDelta: string }
+  | { type: 'tool-call'; toolName: string; args: string }
+  | { type: 'tool-result'; toolName: string }
   | { type: 'done'; sources?: ChatSource[] }
   | { type: 'error'; error: string }

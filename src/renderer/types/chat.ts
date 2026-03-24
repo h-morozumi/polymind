@@ -1,5 +1,10 @@
 export type MessageRole = 'user' | 'assistant'
 
+export interface ToolStatus {
+  toolName: string
+  status: 'calling' | 'done'
+}
+
 export interface ChatMessage {
   id: string
   role: MessageRole
@@ -7,4 +12,5 @@ export interface ChatMessage {
   timestamp: number
   modelId?: string
   modelName?: string
+  toolStatuses?: ToolStatus[]
 }

@@ -49,7 +49,6 @@ export const PROVIDER_TYPE_META: Record<
     requiresApiKey: boolean
     requiresBaseUrl: boolean
     defaultBaseUrl?: string
-    supportsNativeWebSearch: boolean
   }
 > = {
   openai: {
@@ -57,48 +56,86 @@ export const PROVIDER_TYPE_META: Record<
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.openai.com/v1',
-    supportsNativeWebSearch: true,
   },
   'azure-openai': {
     displayName: 'Azure OpenAI',
     requiresApiKey: false,
     requiresBaseUrl: true,
-    supportsNativeWebSearch: true,
   },
   gemini: {
     displayName: 'Google Gemini',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    supportsNativeWebSearch: true,
   },
   claude: {
     displayName: 'Anthropic Claude',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.anthropic.com/v1',
-    supportsNativeWebSearch: true,
   },
   grok: {
     displayName: 'xAI Grok',
     requiresApiKey: true,
     requiresBaseUrl: false,
     defaultBaseUrl: 'https://api.x.ai/v1',
-    supportsNativeWebSearch: true,
   },
   ollama: {
     displayName: 'Ollama (ローカル)',
     requiresApiKey: false,
     requiresBaseUrl: true,
     defaultBaseUrl: 'http://localhost:11434',
-    supportsNativeWebSearch: false,
   },
   'openai-compatible': {
     displayName: 'OpenAI互換',
     requiresApiKey: false,
     requiresBaseUrl: true,
-    supportsNativeWebSearch: false,
   },
+}
+
+/* ------------------------------------------------------------------ */
+/*  Provider Tools                                                     */
+/* ------------------------------------------------------------------ */
+
+export type ToolId =
+  | 'web-search'
+  | 'x-search'
+  | 'code-execution'
+  | 'image-generation'
+  | 'file-search'
+  | 'shell'
+  | 'text-editor'
+  | 'url-context'
+  | 'google-maps'
+
+export interface ToolMeta {
+  displayName: string
+  description: string
+}
+
+export const TOOL_META: Record<ToolId, ToolMeta> = {
+  'web-search': { displayName: 'Web検索', description: 'Webを検索して最新情報を取得' },
+  'x-search': { displayName: 'X検索', description: 'X (Twitter) の投稿を検索' },
+  'code-execution': {
+    displayName: 'コード実行',
+    description: 'サンドボックスでコードを実行',
+  },
+  'image-generation': { displayName: '画像生成', description: 'AIで画像を生成' },
+  'file-search': { displayName: 'ファイル検索', description: 'アップロード済みファイルを検索' },
+  shell: { displayName: 'シェル', description: 'シェルコマンドを実行' },
+  'text-editor': { displayName: 'テキストエディタ', description: 'ファイルの読み書き・編集' },
+  'url-context': { displayName: 'URL取得', description: 'URLのコンテンツを取得・解析' },
+  'google-maps': { displayName: 'Google Maps', description: '位置情報・地図データを取得' },
+}
+
+export const PROVIDER_AVAILABLE_TOOLS: Record<LlmProviderType, ToolId[]> = {
+  openai: ['web-search', 'code-execution', 'image-generation', 'file-search', 'shell'],
+  'azure-openai': ['web-search', 'code-execution', 'image-generation', 'file-search'],
+  gemini: ['web-search', 'code-execution', 'file-search', 'url-context', 'google-maps'],
+  claude: ['web-search', 'code-execution', 'shell', 'text-editor', 'url-context'],
+  grok: ['web-search', 'x-search', 'code-execution', 'file-search'],
+  ollama: [],
+  'openai-compatible': [],
 }
 
 export const PROVIDER_MODEL_DEFAULTS: Record<LlmProviderType, LlmModel[]> = {

@@ -68,6 +68,23 @@ export const MessageBubble = memo(function MessageBubble({
               isUser ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-100'
             }`}
           >
+            {!isUser && message.toolStatuses && message.toolStatuses.length > 0 && (
+              <div className="mb-2 space-y-1 border-b border-gray-700 pb-2">
+                {message.toolStatuses.map((ts, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs text-gray-400">
+                    {ts.status === 'calling' ? (
+                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-500 border-t-blue-400" />
+                    ) : (
+                      <span className="text-green-400">✓</span>
+                    )}
+                    <span>
+                      {ts.toolName}
+                      {ts.status === 'calling' ? '…' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {isUser ? (
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
             ) : (

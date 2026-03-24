@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage } from '@renderer/types/chat'
-import type { LlmProvider, ModelSelection } from '@shared/llm'
+import type { LlmProvider, ModelSelection, ToolId } from '@shared/llm'
 import type { ChatCompletionMessage, ChatStreamEvent } from '@shared/chat'
 import { MessageList } from './MessageList'
 import { ChatInput } from './ChatInput'
@@ -12,7 +12,7 @@ export function ChatView(): React.JSX.Element {
   const [providers, setProviders] = useState<LlmProvider[]>([])
   const [selectedModel, setSelectedModel] = useState<ModelSelection | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [activeTools, setActiveTools] = useState<ToolId[]>([])
   const messageIdRef = useRef(0)
 
   const loadSettings = useCallback(async (): Promise<void> => {
@@ -51,6 +51,12 @@ export function ChatView(): React.JSX.Element {
     },
     [loadSettings],
   )
+
+  const handleToolToggle = useCallback((toolId: ToolId) => {
+    setActiveTools((prev) =>
+      prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId],
+    )
+  }, [])
 
   const handleSend = useCallback(
     async (content: string) => {
@@ -95,6 +101,33 @@ export function ChatView(): React.JSX.Element {
               m.id === assistantId ? { ...m, content: m.content + event.textDelta } : m,
             ),
           )
+        } else if (event.type === 'tool-call') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    toolStatuses: [
+                      ...(m.toolStatuses ?? []),
+                      { toolName: event.toolName, status: 'calling' as const },
+                    ],
+                  }
+                : m,
+            ),
+          )
+        } else if (event.type === 'tool-result') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    toolStatuses: (m.toolStatuses ?? []).map((ts) =>
+                      ts.toolName === event.toolName ? { ...ts, status: 'done' as const } : ts,
+                    ),
+                  }
+                : m,
+            ),
+          )
         }
       })
 
@@ -103,7 +136,7 @@ export function ChatView(): React.JSX.Element {
         const result = await window.api.sendChat({
           messages: history,
           model: selectedModel,
-          webSearch: webSearchEnabled,
+          tools: activeTools.length > 0 ? activeTools : undefined,
         })
 
         if (!result.success) {
@@ -126,7 +159,7 @@ export function ChatView(): React.JSX.Element {
         setIsLoading(false)
       }
     },
-    [nextId, providers, selectedModel, messages, webSearchEnabled],
+    [nextId, providers, selectedModel, messages, activeTools],
   )
 
   const handleStop = useCallback(async () => {
@@ -166,8 +199,8 @@ export function ChatView(): React.JSX.Element {
         providers={providers}
         selectedModel={selectedModel}
         onModelSelect={handleModelSelect}
-        webSearchEnabled={webSearchEnabled}
-        onWebSearchToggle={setWebSearchEnabled}
+        activeTools={activeTools}
+        onToolToggle={handleToolToggle}
       />
 
       {showSettings && (

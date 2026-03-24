@@ -5,7 +5,7 @@ import type { IpcResult } from '@shared/ipc'
 import type { ChatSendPayload, ChatStreamEvent } from '@shared/chat'
 import { resolveModel } from '@shared/llm'
 import type { LlmSettingsService } from '../services/llm-settings'
-import { createLanguageModel, createWebSearchTools } from '../services/llm-client'
+import { createLanguageModel, createProviderTools } from '../services/llm-client'
 import { createAzureEntraTokenProvider } from '../services/azure-auth'
 
 const MAX_MESSAGE_LENGTH = 10_000
@@ -78,9 +78,10 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
 
         const { primary, fallback } = createLanguageModel(provider, model, azureTokenProvider)
 
-        const webSearchTools = payload.webSearch
-          ? createWebSearchTools(provider, azureTokenProvider)
-          : undefined
+        const providerTools =
+          payload.tools && payload.tools.length > 0
+            ? createProviderTools(provider, payload.tools, azureTokenProvider)
+            : undefined
 
         const runStream = async (languageModel: typeof primary): Promise<string> => {
           const abortController = new AbortController()
@@ -90,13 +91,33 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
             model: languageModel,
             messages: payload.messages,
             abortSignal: abortController.signal,
-            ...(webSearchTools ? { tools: webSearchTools } : {}),
+            ...(providerTools ? { tools: providerTools } : {}),
           })
 
           let fullText = ''
-          for await (const chunk of result.textStream) {
-            fullText += chunk
-            sendStreamEvent({ type: 'text-delta', textDelta: chunk })
+          for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+              const delta =
+                (part as { textDelta?: string; text?: string }).textDelta ??
+                (part as { text?: string }).text ??
+                ''
+              if (delta) {
+                fullText += delta
+                sendStreamEvent({ type: 'text-delta', textDelta: delta })
+              }
+            } else if (part.type === 'tool-call') {
+              const argsStr = part.args ? JSON.stringify(part.args).substring(0, 200) : ''
+              console.log(`[Tool] called: ${part.toolName}`, argsStr)
+              sendStreamEvent({
+                type: 'tool-call',
+                toolName: part.toolName,
+                args: argsStr,
+              })
+            } else if (part.type === 'tool-result') {
+              const resultStr = part.result ? String(part.result).substring(0, 200) : ''
+              console.log(`[Tool] result: ${part.toolName}`, resultStr)
+              sendStreamEvent({ type: 'tool-result', toolName: part.toolName })
+            }
           }
 
           // Ensure any deferred errors are surfaced
@@ -126,11 +147,15 @@ export function registerChatHandlers(llmSettingsService: LlmSettingsService): vo
             throw primaryErr
           }
           if (fallback) {
-            if (webSearchTools) {
+            if (providerTools) {
+              console.log(
+                '[LLM] Primary API failed with tools enabled:',
+                primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
+              )
               // Web search tools are only supported on the Responses API.
               // Return a user-friendly message instead of falling back without search.
               const msg =
-                'このモデルではWeb検索は利用できません。Web検索をオフにしてお試しください。'
+                'このモデルでは選択されたツールは利用できません。ツールをオフにしてお試しください。'
               sendStreamEvent({ type: 'text-delta', textDelta: msg })
               sendStreamEvent({ type: 'done' })
               activeAbortController = null
@@ -201,7 +226,7 @@ function isValidChatPayload(value: unknown): value is ChatSendPayload {
   const model = obj.model as Record<string, unknown>
   if (typeof model.providerId !== 'string' || typeof model.modelId !== 'string') return false
 
-  if ('webSearch' in obj && typeof obj.webSearch !== 'boolean') return false
+  if ('tools' in obj && !Array.isArray(obj.tools)) return false
 
   return true
 }
