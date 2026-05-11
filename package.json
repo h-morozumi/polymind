@@ -23,7 +23,7 @@
     "@azure/identity": "^4.13.1",
     "ai": "^6.0.134",
     "highlight.js": "^11.11.1",
-    "mermaid": "^11.13.0",
+    "mermaid": "^11.15.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
